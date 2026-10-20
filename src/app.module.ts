@@ -12,6 +12,7 @@ import { PostsModule } from './modules/posts/posts.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 import { MessagingModule } from './modules/messaging/messaging.module.js';
 import { MediaModule } from './modules/media/media.module.js';
+import { ProjectsModule } from './modules/projects/projects.module.js';
 import { GitHubPreviewModule } from './modules/github-preview/github-preview.module.js';
 
 @Module({
@@ -28,6 +29,7 @@ import { GitHubPreviewModule } from './modules/github-preview/github-preview.mod
     PostsModule,
     MessagingModule,
     MediaModule,
+    ProjectsModule,
     GitHubPreviewModule,
   ],
   controllers: [AppController],

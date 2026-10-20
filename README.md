@@ -59,6 +59,9 @@ Parcours disponibles dans cette première tranche :
 - Questions techniques : `GET/POST /api/v1/posts/:postId/answers`,
   `PUT/DELETE /api/v1/posts/:postId/follow` et
   `PUT/DELETE /api/v1/posts/comments/:commentId/useful`
+- Projets open source : `GET/POST /api/v1/projects`, `GET/PATCH /api/v1/projects/:id`,
+  `PUT /api/v1/projects/:id/members`, `GET/POST /api/v1/projects/:id/tasks`,
+  `PATCH /api/v1/projects/:id/tasks/:taskId`, `GET/POST /api/v1/projects/:id/contributions`
 - Aperçu GitHub public et mis en cache :
   `GET /api/v1/github-preview?url=https://github.com/owner/repo`
 - `POST /api/v1/media/profile/signature` puis
