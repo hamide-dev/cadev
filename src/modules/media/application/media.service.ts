@@ -13,6 +13,7 @@ import { ConversationMemberEntity } from '../../messaging/infrastructure/convers
 import { MediaPurpose, MediaResourceType } from '../domain/media.types.js';
 import type {
   PublicMessageMedia,
+  PublicPostMedia,
   UploadSignature,
 } from '../domain/media.types.js';
 import { MediaAssetEntity } from '../infrastructure/media-asset.entity.js';
@@ -21,9 +22,13 @@ import { CloudinaryAdapter } from '../infrastructure/cloudinary.adapter.js';
 const PROFILE_IMAGE_FORMATS = ['jpg', 'jpeg', 'png', 'webp'];
 const CHAT_IMAGE_FORMATS = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
 const CHAT_VIDEO_FORMATS = ['mp4', 'webm', 'mov'];
+const POST_IMAGE_FORMATS = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+const POST_VIDEO_FORMATS = ['mp4', 'webm', 'mov'];
 const PROFILE_MAX_BYTES = 5 * 1024 * 1024;
 const CHAT_IMAGE_MAX_BYTES = 15 * 1024 * 1024;
 const CHAT_VIDEO_MAX_BYTES = 100 * 1024 * 1024;
+const POST_IMAGE_MAX_BYTES = 15 * 1024 * 1024;
+const POST_VIDEO_MAX_BYTES = 100 * 1024 * 1024;
 const PRIVATE_URL_TTL_SECONDS = 10 * 60;
 
 @Injectable()
@@ -176,6 +181,120 @@ export class MediaService {
     return this.toPublicMessageMedia(asset);
   }
 
+  createPostUploadSignature(
+    userId: string,
+    resourceType: MediaResourceType,
+  ): UploadSignature {
+    return this.createSignature(
+      `hello-world/posts/${userId}/${randomUUID()}`,
+      resourceType,
+      'upload',
+      postMaxBytesFor(resourceType),
+      postFormatsFor(resourceType),
+    );
+  }
+
+  async confirmPostUpload(
+    userId: string,
+    publicId: string,
+    resourceType: MediaResourceType,
+  ): Promise<PublicPostMedia> {
+    assertPublicIdPrefix(publicId, `hello-world/posts/${userId}/`);
+    const existing = await this.assets.findOneBy({ cloudPublicId: publicId });
+    if (existing) {
+      if (existing.ownerId !== userId || existing.purpose !== MediaPurpose.POST) {
+        throw new ConflictException({
+          code: 'MEDIA_ASSET_CONFLICT',
+          message: 'This asset cannot be used as a post attachment.',
+        });
+      }
+      return this.toPublicPostMedia(existing);
+    }
+    const cloudAsset = await this.cloudinary.findAsset(
+      publicId,
+      resourceType,
+      'upload',
+    );
+    assertVerifiedAsset(
+      cloudAsset,
+      publicId,
+      resourceType,
+      'upload',
+      postFormatsFor(resourceType),
+      postMaxBytesFor(resourceType),
+    );
+    const asset = await this.assets.save(
+      this.assets.create({
+        ownerId: userId,
+        purpose: MediaPurpose.POST,
+        resourceType,
+        cloudPublicId: cloudAsset.publicId,
+        format: cloudAsset.format,
+        bytes: cloudAsset.bytes,
+        publicUrl: cloudAsset.secureUrl,
+        conversationId: null,
+        messageId: null,
+        postId: null,
+      }),
+    );
+    return this.toPublicPostMedia(asset);
+  }
+
+  async attachPostAssets(
+    ownerId: string,
+    postId: string,
+    assetIds: string[],
+  ): Promise<void> {
+    if (assetIds.length === 0) return;
+    const assets = await this.assets.find({
+      where: {
+        id: In(assetIds),
+        ownerId,
+        purpose: MediaPurpose.POST,
+        postId: IsNull(),
+      },
+    });
+    if (assets.length !== assetIds.length) {
+      throw new ConflictException({
+        code: 'MEDIA_ASSET_NOT_ATTACHABLE',
+        message: 'Every post attachment must be your unassigned upload.',
+      });
+    }
+    const result = await this.assets.update(
+      {
+        id: In(assetIds),
+        ownerId,
+        purpose: MediaPurpose.POST,
+        postId: IsNull(),
+      },
+      { postId },
+    );
+    if (result.affected !== assetIds.length) {
+      throw new ConflictException({
+        code: 'MEDIA_ASSET_NOT_ATTACHABLE',
+        message: 'One or more post attachments have already been used.',
+      });
+    }
+  }
+
+  async getPublicPostAttachments(
+    postIds: string[],
+  ): Promise<Map<string, PublicPostMedia[]>> {
+    if (postIds.length === 0) return new Map();
+    const assets = await this.assets.find({
+      where: { postId: In(postIds), purpose: MediaPurpose.POST },
+      order: { createdAt: 'ASC' },
+    });
+    const result = new Map<string, PublicPostMedia[]>();
+    for (const asset of assets) {
+      if (!asset.postId) continue;
+      const list = result.get(asset.postId) ?? [];
+      list.push(this.toPublicPostMedia(asset));
+      result.set(asset.postId, list);
+    }
+    return result;
+  }
+
   async getAttachableChatAssets(
     ownerId: string,
     conversationId: string,
@@ -278,6 +397,22 @@ export class MediaService {
       urlExpiresAt: new Date(expiresAt * 1000).toISOString(),
     };
   }
+
+  private toPublicPostMedia(asset: MediaAssetEntity): PublicPostMedia {
+    if (!asset.publicUrl) {
+      throw new ConflictException({
+        code: 'MEDIA_ASSET_INVALID',
+        message: 'The post attachment has no public delivery URL.',
+      });
+    }
+    return {
+      id: asset.id,
+      resourceType: asset.resourceType,
+      format: asset.format,
+      bytes: asset.bytes,
+      url: asset.publicUrl,
+    };
+  }
 }
 
 function assertPublicIdPrefix(publicId: string, prefix: string): void {
@@ -340,4 +475,16 @@ function chatMaxBytesFor(resourceType: MediaResourceType): number {
   return resourceType === MediaResourceType.IMAGE
     ? CHAT_IMAGE_MAX_BYTES
     : CHAT_VIDEO_MAX_BYTES;
+}
+
+function postFormatsFor(resourceType: MediaResourceType): string[] {
+  return resourceType === MediaResourceType.IMAGE
+    ? POST_IMAGE_FORMATS
+    : POST_VIDEO_FORMATS;
+}
+
+function postMaxBytesFor(resourceType: MediaResourceType): number {
+  return resourceType === MediaResourceType.IMAGE
+    ? POST_IMAGE_MAX_BYTES
+    : POST_VIDEO_MAX_BYTES;
 }

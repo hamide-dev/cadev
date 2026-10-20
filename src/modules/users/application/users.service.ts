@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -9,6 +10,7 @@ import { Repository } from 'typeorm';
 import { isUniqueViolation } from '../../../database/is-unique-violation.js';
 import type { PublicUser } from '../domain/user.types.js';
 import { UserEntity } from '../infrastructure/user.entity.js';
+import { UserFollowEntity } from '../infrastructure/user-follow.entity.js';
 import type { UpdateProfileDto } from '../presentation/dto/update-profile.dto.js';
 
 @Injectable()
@@ -16,6 +18,8 @@ export class UsersService {
   constructor(
     @InjectRepository(UserEntity)
     private readonly users: Repository<UserEntity>,
+    @InjectRepository(UserFollowEntity)
+    private readonly follows: Repository<UserFollowEntity>,
   ) {}
 
   async create(input: {
@@ -32,6 +36,11 @@ export class UsersService {
       githubId: null,
       bio: null,
       avatarUrl: null,
+      githubUrl: null,
+      specialty: null,
+      experienceLevel: null,
+      interests: [],
+      technologies: [],
     });
     try {
       return await this.users.save(user);
@@ -104,7 +113,7 @@ export class UsersService {
       .toLowerCase()
       .replace(/[^a-z0-9_]/g, '_')
       .replace(/^_+|_+$/g, '')
-      .slice(0, 20);
+      .slice(0, 11);
     const user = this.users.create({
       email: input.email,
       username: `${emailName || 'developer'}_${suffix}`,
@@ -115,6 +124,11 @@ export class UsersService {
       githubId: input.provider === 'github' ? input.providerId : null,
       bio: null,
       avatarUrl: null,
+      githubUrl: null,
+      specialty: null,
+      experienceLevel: null,
+      interests: [],
+      technologies: [],
     });
     try {
       return await this.users.save(user);
@@ -166,12 +180,76 @@ export class UsersService {
     input: UpdateProfileDto,
   ): Promise<PublicUser> {
     const user = await this.findById(id);
-    Object.assign(user, input);
-    return toPublicUser(await this.users.save(user));
+    if (input.username !== undefined)
+      user.username = input.username.toLowerCase();
+    if (input.displayName !== undefined) user.displayName = input.displayName;
+    if (input.bio !== undefined) user.bio = input.bio;
+    if (input.githubUrl !== undefined) user.githubUrl = input.githubUrl;
+    if (input.specialty !== undefined) user.specialty = input.specialty;
+    if (input.experienceLevel !== undefined)
+      user.experienceLevel = input.experienceLevel;
+    if (input.interests !== undefined)
+      user.interests = normalizeProfileTags(input.interests);
+    if (input.technologies !== undefined)
+      user.technologies = normalizeProfileTags(input.technologies);
+    try {
+      return toPublicUser(await this.users.save(user));
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        throw new ConflictException({
+          code: 'HANDLE_ALREADY_TAKEN',
+          message: 'This handle is already in use.',
+        });
+      }
+      throw error;
+    }
   }
 
   async updateAvatarUrl(id: string, avatarUrl: string): Promise<void> {
     await this.users.update({ id }, { avatarUrl });
+  }
+
+  async follow(followerId: string, username: string): Promise<void> {
+    const followed = await this.users.findOneBy({
+      username: username.toLowerCase().replace(/^@/, ''),
+    });
+    if (!followed) {
+      throw new NotFoundException({
+        code: 'USER_NOT_FOUND',
+        message: 'User not found.',
+      });
+    }
+    if (followed.id === followerId) {
+      throw new ForbiddenException({
+        code: 'CANNOT_FOLLOW_SELF',
+        message: 'You cannot follow yourself.',
+      });
+    }
+    const existing = await this.follows.findOneBy({
+      followerId,
+      followedId: followed.id,
+    });
+    if (existing) return;
+    try {
+      await this.follows.save(
+        this.follows.create({ followerId, followedId: followed.id }),
+      );
+    } catch (error) {
+      if (!isUniqueViolation(error)) throw error;
+    }
+  }
+
+  async unfollow(followerId: string, username: string): Promise<void> {
+    const followed = await this.users.findOneBy({
+      username: username.toLowerCase().replace(/^@/, ''),
+    });
+    if (!followed) {
+      throw new NotFoundException({
+        code: 'USER_NOT_FOUND',
+        message: 'User not found.',
+      });
+    }
+    await this.follows.delete({ followerId, followedId: followed.id });
   }
 
   toPublic(user: UserEntity, includeEmail = false): PublicUser {
@@ -190,6 +268,15 @@ export function toPublicUser(
     ...(includeEmail ? { email: user.email } : {}),
     bio: user.bio,
     avatarUrl: user.avatarUrl,
+    githubUrl: user.githubUrl,
+    specialty: user.specialty,
+    experienceLevel: user.experienceLevel,
+    interests: user.interests ?? [],
+    technologies: user.technologies ?? [],
     createdAt: user.createdAt.toISOString(),
   };
+}
+
+function normalizeProfileTags(values: string[]): string[] {
+  return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
 }

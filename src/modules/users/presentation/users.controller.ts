@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Param, Patch, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Put,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../common/auth/current-user.decorator.js';
 import type { AuthUser } from '../../../common/auth/auth-user.js';
@@ -36,5 +45,29 @@ export class UsersController {
     @Body() input: UpdateProfileDto,
   ): Promise<PublicUser> {
     return this.usersService.updateProfile(user.id, input);
+  }
+
+  @Put(':username/follow')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Follow a developer by handle' })
+  async follow(
+    @CurrentUser() user: AuthUser,
+    @Param('username') username: string,
+  ): Promise<{ following: true }> {
+    await this.usersService.follow(user.id, username);
+    return { following: true };
+  }
+
+  @Delete(':username/follow')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Unfollow a developer by handle' })
+  async unfollow(
+    @CurrentUser() user: AuthUser,
+    @Param('username') username: string,
+  ): Promise<{ following: false }> {
+    await this.usersService.unfollow(user.id, username);
+    return { following: false };
   }
 }

@@ -97,7 +97,8 @@ describe('AuthService', () => {
     });
     expect(brevoSmtp.sendVerificationCode).toHaveBeenCalledWith(
       'dev@example.test',
-      expect.stringMatching(/^\d{6}$/),
+      expect.stringMatching(/^\d{4}$/),
+      'registration',
     );
     expect(emailVerifications.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -148,9 +149,9 @@ describe('AuthService', () => {
   });
 
   it('verifies the emailed code before issuing an access token', async () => {
-    const code = '083147';
+    const code = '3147';
     const codeHash = createHmac('sha256', 'test-secret')
-      .update(`${user.id}:${code}`)
+      .update(`registration:${user.id}:${code}`)
       .digest('hex');
     const verifiedUser = Object.assign(new UserEntity(), user, {
       emailVerified: true,
@@ -164,6 +165,7 @@ describe('AuthService', () => {
       findOneBy: vi.fn().mockResolvedValue({
         id: 'verification-id',
         userId: user.id,
+        purpose: 'registration',
         codeHash,
         attempts: 0,
         expiresAt: new Date(Date.now() + 60_000),
@@ -209,5 +211,54 @@ describe('AuthService', () => {
     expect(emailVerifications.delete).toHaveBeenCalledWith({
       id: 'verification-id',
     });
+  });
+
+  it('sends a four-digit login code without revealing unknown accounts', async () => {
+    const verifiedUser = Object.assign(new UserEntity(), user, {
+      emailVerified: true,
+    });
+    const usersService = {
+      findByEmail: vi.fn().mockResolvedValue(verifiedUser),
+    };
+    const emailVerifications = {
+      upsert: vi.fn().mockResolvedValue(undefined),
+    };
+    const brevoSmtp = {
+      sendVerificationCode: vi.fn().mockResolvedValue(undefined),
+    };
+    const testingModule = await Test.createTestingModule({
+      providers: [
+        AuthService,
+        { provide: UsersService, useValue: usersService },
+        { provide: JwtService, useValue: { signAsync: vi.fn() } },
+        { provide: BrevoSmtpService, useValue: brevoSmtp },
+        {
+          provide: ConfigService,
+          useValue: { get: vi.fn().mockReturnValue('test-secret') },
+        },
+        {
+          provide: getRepositoryToken(EmailVerificationEntity),
+          useValue: emailVerifications,
+        },
+      ],
+    }).compile();
+
+    await expect(
+      testingModule.get(AuthService).requestLoginCode({
+        email: user.email,
+      }),
+    ).resolves.toMatchObject({ expiresIn: 600 });
+    expect(emailVerifications.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        purpose: 'login',
+        codeHash: expect.any(String),
+      }),
+      ['userId'],
+    );
+    expect(brevoSmtp.sendVerificationCode).toHaveBeenCalledWith(
+      user.email,
+      expect.stringMatching(/^\d{4}$/),
+      'login',
+    );
   });
 });

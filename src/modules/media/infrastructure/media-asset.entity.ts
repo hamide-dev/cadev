@@ -10,6 +10,7 @@ import {
 import { UserEntity } from '../../users/infrastructure/user.entity.js';
 import { ConversationEntity } from '../../messaging/infrastructure/conversation.entity.js';
 import { MessageEntity } from '../../messaging/infrastructure/message.entity.js';
+import { PostEntity } from '../../posts/infrastructure/post.entity.js';
 import { MediaPurpose, MediaResourceType } from '../domain/media.types.js';
 
 @Entity('media_assets')
@@ -19,6 +20,7 @@ import { MediaPurpose, MediaResourceType } from '../domain/media.types.js';
   'ownerId',
   'messageId',
 ])
+@Index('IDX_media_assets_post_owner', ['postId', 'ownerId'])
 export class MediaAssetEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
@@ -30,7 +32,7 @@ export class MediaAssetEntity {
   @JoinColumn({ name: 'ownerId' })
   owner!: UserEntity;
 
-  @Column({ type: 'enum', enum: MediaPurpose, enumName: 'media_purpose' })
+  @Column({ type: 'varchar', length: 20 })
   purpose!: MediaPurpose;
 
   @Column({
@@ -65,6 +67,13 @@ export class MediaAssetEntity {
   @ManyToOne(() => MessageEntity, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'messageId' })
   message!: MessageEntity | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  postId!: string | null;
+
+  @ManyToOne(() => PostEntity, { nullable: true, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'postId' })
+  post!: PostEntity | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;

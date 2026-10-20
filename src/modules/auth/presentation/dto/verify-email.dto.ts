@@ -6,6 +6,6 @@ export class VerifyEmailDto {
   email!: string;
 
   @IsString()
-  @Matches(/^\d{6}$/)
+  @Matches(/^\d{4}$/)
   code!: string;
 }

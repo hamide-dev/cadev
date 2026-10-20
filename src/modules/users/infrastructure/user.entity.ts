@@ -5,6 +5,10 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import {
+  DeveloperSpecialty,
+  ExperienceLevel,
+} from '../domain/user.types.js';
 
 @Entity('users')
 export class UserEntity {
@@ -37,6 +41,39 @@ export class UserEntity {
 
   @Column({ type: 'varchar', length: 2048, nullable: true })
   avatarUrl!: string | null;
+
+  @Column({ type: 'varchar', length: 2048, nullable: true })
+  githubUrl!: string | null;
+
+  @Column({
+    type: 'enum',
+    enum: DeveloperSpecialty,
+    enumName: 'developer_specialty',
+    nullable: true,
+  })
+  specialty!: DeveloperSpecialty | null;
+
+  @Column({
+    type: 'enum',
+    enum: ExperienceLevel,
+    enumName: 'experience_level',
+    nullable: true,
+  })
+  experienceLevel!: ExperienceLevel | null;
+
+  @Column({
+    type: 'varchar',
+    array: true,
+    default: () => 'ARRAY[]::varchar[]',
+  })
+  interests!: string[];
+
+  @Column({
+    type: 'varchar',
+    array: true,
+    default: () => 'ARRAY[]::varchar[]',
+  })
+  technologies!: string[];
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;

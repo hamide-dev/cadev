@@ -37,11 +37,30 @@ Parcours disponibles dans cette première tranche :
   `POST /api/v1/auth/email/verify` confirme l'adresse et délivre le JWT ;
   `POST /api/v1/auth/email/resend` renvoie un code si nécessaire
 - `POST /api/v1/auth/login` pour les comptes e-mail/mot de passe vérifiés
+- `POST /api/v1/auth/login/code` puis `POST /api/v1/auth/login/verify` pour
+  demander et valider un code OTP de connexion à 4 chiffres
 - `GET /api/v1/auth/google` et `/api/v1/auth/github` pour OAuth ; les callbacks
   renvoient le résultat d'authentification JSON
 - `GET /api/v1/users/:username`, `GET/PATCH /api/v1/users/me`
+- `PUT/DELETE /api/v1/users/:username/follow` pour suivre/ne plus suivre un
+  développeur
 - `GET/POST /api/v1/posts`, `GET/PATCH/DELETE /api/v1/posts/:postId`
+- `POST /api/v1/posts/drafts`, `GET /api/v1/posts/drafts/me` et
+  `POST /api/v1/posts/:postId/publish`
+- Flux paginés : `GET /api/v1/posts`, `/posts/feed/following`,
+  `/posts/feed/for-you` et `/posts/users/:username`
+- Likes via `PUT/DELETE /api/v1/posts/:postId/like`, épinglage via
+  `PUT/DELETE /api/v1/posts/:postId/pin`, mentions `@handle` résolues sur les
+  comptes existants
+- Médias de publication via `POST /api/v1/media/posts/signature` puis
+  `POST /api/v1/media/posts/confirm`; les identifiants retournés sont fournis
+  dans `attachmentIds` lors de la création ou modification d'un post
 - `GET/POST /api/v1/posts/:postId/comments` et modification/suppression HTTP
+- Questions techniques : `GET/POST /api/v1/posts/:postId/answers`,
+  `PUT/DELETE /api/v1/posts/:postId/follow` et
+  `PUT/DELETE /api/v1/posts/comments/:commentId/useful`
+- Aperçu GitHub public et mis en cache :
+  `GET /api/v1/github-preview?url=https://github.com/owner/repo`
 - `POST /api/v1/media/profile/signature` puis
   `POST /api/v1/media/profile/confirm` pour les photos de profil
 - Namespace Socket.IO `/messaging` pour conversations directes/groupes,
@@ -75,9 +94,10 @@ Ils doivent être définis ensemble pour activer le service.
 Les paramètres SMTP Brevo sont requis ensemble pour envoyer les OTP ; les
 inscriptions locales restent bloquées à l'étape de vérification tant que le
 service d'e-mail n'est pas configuré. Chaque fournisseur OAuth est optionnel,
-mais ses trois paramètres doivent être définis ensemble. L'OTP est demandé lors
-de l'inscription locale, pas à chaque connexion. Google et GitHub doivent
-retourner une adresse e-mail vérifiée.
+mais ses trois paramètres doivent être définis ensemble. L'OTP à 4 chiffres
+est demandé lors de l'inscription locale et peut aussi servir à la connexion
+par e-mail ; la connexion par mot de passe reste disponible. Google et GitHub
+doivent retourner une adresse e-mail vérifiée.
 
 ## Scripts utiles
 
@@ -98,11 +118,18 @@ TypeORM est désactivée.
 - [Conception et architecture](./docs/architecture.md)
 - [Contrats HTTP et WebSocket](./docs/api-contracts.md)
 
-Les commentaires sous les publications passent par HTTP. Le domaine de
+Les profils exposent le handle unique (3 à 20 caractères), la spécialité, le
+niveau d'expérience, la biographie, le lien GitHub, les centres d'intérêt et les
+technologies maîtrisées via `PATCH /api/v1/users/me`. Les étapes visuelles de
+l'inscription en cinq écrans relèvent du frontend, qui n'est pas inclus dans ce
+dépôt.
+
+Les commentaires et réponses sous les publications passent par HTTP. Le domaine de
 messagerie (conversations, groupes et messages) passe exclusivement par
 WebSocket/Socket.IO. La messagerie directe entre deux personnes utilise une
 conversation de type `DIRECT`. L'OTP d'inscription via Brevo et la connexion
 OAuth Google/GitHub sont implémentés ; les refresh tokens rotatifs,
-projets/contributions, notifications, réactions, abonnements, favoris et
-recherche restent à développer. Les médias sont intégrés pour les photos de
-profil et les pièces jointes image/vidéo des chats.
+projets/contributions, notifications, réactions, favoris et recherche restent à
+développer. Les médias sont intégrés pour les photos de profil et les pièces
+jointes image/vidéo des chats et publications. Les migrations doivent être
+appliquées avec `npm run migration:run` avant d'utiliser les nouvelles tables.

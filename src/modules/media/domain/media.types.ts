@@ -1,6 +1,7 @@
 export enum MediaPurpose {
   PROFILE = 'PROFILE',
   CHAT = 'CHAT',
+  POST = 'POST',
 }
 
 export enum MediaResourceType {
@@ -26,4 +27,12 @@ export interface PublicMessageMedia {
   bytes: number;
   url: string;
   urlExpiresAt: string;
+}
+
+export interface PublicPostMedia {
+  id: string;
+  resourceType: MediaResourceType;
+  format: string;
+  bytes: number;
+  url: string;
 }

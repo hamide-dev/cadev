@@ -3,6 +3,9 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { CommentsService } from './comments.service.js';
 import { CommentEntity } from '../infrastructure/comment.entity.js';
 import { PostEntity } from '../infrastructure/post.entity.js';
+import { UserEntity } from '../../users/infrastructure/user.entity.js';
+import { CommentMentionEntity } from '../infrastructure/comment-mention.entity.js';
+import { CommentVoteEntity } from '../infrastructure/comment-vote.entity.js';
 
 describe('CommentsService', () => {
   it('rejects a reply whose parent comment belongs to another post', async () => {
@@ -22,6 +25,18 @@ describe('CommentsService', () => {
         {
           provide: getRepositoryToken(PostEntity),
           useValue: postsRepository,
+        },
+        {
+          provide: getRepositoryToken(CommentVoteEntity),
+          useValue: {},
+        },
+        {
+          provide: getRepositoryToken(CommentMentionEntity),
+          useValue: {},
+        },
+        {
+          provide: getRepositoryToken(UserEntity),
+          useValue: {},
         },
       ],
     }).compile();

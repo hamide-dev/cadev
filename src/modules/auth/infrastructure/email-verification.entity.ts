@@ -7,6 +7,8 @@ import {
 } from 'typeorm';
 import { UserEntity } from '../../users/infrastructure/user.entity.js';
 
+export type EmailVerificationPurpose = 'registration' | 'login';
+
 @Entity('email_verifications')
 export class EmailVerificationEntity {
   @PrimaryGeneratedColumn('uuid')
@@ -21,6 +23,9 @@ export class EmailVerificationEntity {
 
   @Column({ type: 'varchar', length: 64 })
   codeHash!: string;
+
+  @Column({ type: 'varchar', length: 20, default: 'registration' })
+  purpose!: EmailVerificationPurpose;
 
   @Column({ type: 'integer', default: 0 })
   attempts!: number;

@@ -17,8 +17,11 @@ import { BrevoSmtpService } from '../infrastructure/brevo-smtp.service.js';
 import type { PublicUser } from '../../users/domain/user.types.js';
 import type { RegisterDto } from '../presentation/dto/register.dto.js';
 import type { LoginDto } from '../presentation/dto/login.dto.js';
+import type { RequestLoginCodeDto } from '../presentation/dto/request-login-code.dto.js';
 import type { VerifyEmailDto } from '../presentation/dto/verify-email.dto.js';
+import type { VerifyLoginCodeDto } from '../presentation/dto/verify-login-code.dto.js';
 import type { OAuthIdentity } from '../domain/oauth-identity.js';
+import type { EmailVerificationPurpose } from '../infrastructure/email-verification.entity.js';
 
 export interface AuthResponse {
   accessToken: string;
@@ -81,15 +84,15 @@ export class AuthService {
       throw invalidVerificationCode();
     }
     if (user.emailVerified) {
-      return this.issueToken(
-        user.id,
-        user.email,
-        this.usersService.toPublic(user),
-      );
+      throw new ForbiddenException({
+        code: 'EMAIL_ALREADY_VERIFIED',
+        message: 'This email address has already been verified.',
+      });
     }
 
     const verification = await this.emailVerifications.findOneBy({
       userId: user.id,
+      purpose: 'registration',
     });
     if (!verification) throw invalidVerificationCode();
     if (verification.expiresAt.getTime() <= Date.now()) {
@@ -109,7 +112,11 @@ export class AuthService {
       });
     }
 
-    const expectedHash = this.hashVerificationCode(user.id, input.code);
+    const expectedHash = this.hashVerificationCode(
+      user.id,
+      input.code,
+      'registration',
+    );
     const storedHash = Buffer.from(verification.codeHash, 'hex');
     const submittedHash = Buffer.from(expectedHash, 'hex');
     if (
@@ -140,6 +147,63 @@ export class AuthService {
       email: normalizedEmail,
       expiresIn: VERIFICATION_TTL_MS / 1000,
     };
+  }
+
+  async requestLoginCode(
+    input: RequestLoginCodeDto,
+  ): Promise<RegistrationResponse> {
+    const normalizedEmail = input.email.trim().toLowerCase();
+    const user = await this.usersService.findByEmail(normalizedEmail);
+    if (user?.emailVerified) {
+      await this.sendVerificationCode(user.id, user.email, 'login');
+    }
+    return {
+      message: 'If this verified account exists, a login code has been sent.',
+      email: normalizedEmail,
+      expiresIn: VERIFICATION_TTL_MS / 1000,
+    };
+  }
+
+  async verifyLoginCode(input: VerifyLoginCodeDto): Promise<AuthResponse> {
+    const user = await this.usersService.findByEmail(
+      input.email.trim().toLowerCase(),
+    );
+    if (!user?.emailVerified) throw invalidVerificationCode();
+    const verification = await this.emailVerifications.findOneBy({
+      userId: user.id,
+      purpose: 'login',
+    });
+    if (!verification) throw invalidVerificationCode();
+    if (verification.expiresAt.getTime() <= Date.now()) {
+      await this.emailVerifications.delete({ id: verification.id });
+      throw invalidVerificationCode();
+    }
+    const attempts = await this.emailVerifications.increment(
+      { id: verification.id, attempts: LessThan(MAX_VERIFICATION_ATTEMPTS) },
+      'attempts',
+      1,
+    );
+    if (!attempts.affected) {
+      throw new ForbiddenException({
+        code: 'VERIFICATION_ATTEMPTS_EXCEEDED',
+        message: 'Request a new login code and try again.',
+      });
+    }
+    const expectedHash = this.hashVerificationCode(user.id, input.code, 'login');
+    const storedHash = Buffer.from(verification.codeHash, 'hex');
+    const submittedHash = Buffer.from(expectedHash, 'hex');
+    if (
+      storedHash.length !== submittedHash.length ||
+      !timingSafeEqual(storedHash, submittedHash)
+    ) {
+      throw invalidVerificationCode();
+    }
+    await this.emailVerifications.delete({ id: verification.id });
+    return this.issueToken(
+      user.id,
+      user.email,
+      this.usersService.toPublic(user),
+    );
   }
 
   async login(input: LoginDto): Promise<AuthResponse> {
@@ -191,26 +255,32 @@ export class AuthService {
   private async sendVerificationCode(
     userId: string,
     email: string,
+    purpose: EmailVerificationPurpose = 'registration',
   ): Promise<void> {
-    const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
+    const code = randomInt(0, 10_000).toString().padStart(4, '0');
     await this.emailVerifications.upsert(
       {
         userId,
-        codeHash: this.hashVerificationCode(userId, code),
+        codeHash: this.hashVerificationCode(userId, code, purpose),
+        purpose,
         attempts: 0,
         expiresAt: new Date(Date.now() + VERIFICATION_TTL_MS),
       },
       ['userId'],
     );
-    await this.brevoSmtp.sendVerificationCode(email, code);
+    await this.brevoSmtp.sendVerificationCode(email, code, purpose);
   }
 
-  private hashVerificationCode(userId: string, code: string): string {
+  private hashVerificationCode(
+    userId: string,
+    code: string,
+    purpose: EmailVerificationPurpose,
+  ): string {
     return createHmac(
       'sha256',
       this.config.get('JWT_ACCESS_SECRET', { infer: true }),
     )
-      .update(`${userId}:${code}`)
+      .update(`${purpose}:${userId}:${code}`)
       .digest('hex');
   }
 

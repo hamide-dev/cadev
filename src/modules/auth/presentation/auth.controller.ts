@@ -11,7 +11,9 @@ import type { OAuthIdentity } from '../domain/oauth-identity.js';
 import { LoginDto } from './dto/login.dto.js';
 import { RegisterDto } from './dto/register.dto.js';
 import { ResendVerificationDto } from './dto/resend-verification.dto.js';
+import { RequestLoginCodeDto } from './dto/request-login-code.dto.js';
 import { VerifyEmailDto } from './dto/verify-email.dto.js';
+import { VerifyLoginCodeDto } from './dto/verify-login-code.dto.js';
 import {
   OAuthConfigurationGuard,
   OAuthProvider,
@@ -47,6 +49,22 @@ export class AuthController {
     @Body() input: ResendVerificationDto,
   ): Promise<RegistrationResponse> {
     return this.authService.resendVerificationCode(input.email);
+  }
+
+  @Post('login/code')
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Send a one-time code for email sign-in' })
+  requestLoginCode(
+    @Body() input: RequestLoginCodeDto,
+  ): Promise<RegistrationResponse> {
+    return this.authService.requestLoginCode(input);
+  }
+
+  @Post('login/verify')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Sign in using a one-time email code' })
+  verifyLoginCode(@Body() input: VerifyLoginCodeDto): Promise<AuthResponse> {
+    return this.authService.verifyLoginCode(input);
   }
 
   @Post('login')
