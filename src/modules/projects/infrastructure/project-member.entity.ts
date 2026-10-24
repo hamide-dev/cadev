@@ -6,6 +6,7 @@ import {
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
+  type Relation,
 } from 'typeorm';
 import { UserEntity } from '../../users/infrastructure/user.entity.js';
 import { ProjectMemberRole } from '../domain/project.types.js';
@@ -22,7 +23,7 @@ export class ProjectMemberEntity {
 
   @ManyToOne(() => ProjectEntity, { nullable: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'projectId' })
-  project!: ProjectEntity;
+  project!: Relation<ProjectEntity>;
 
   @Column({ type: 'uuid' })
   userId!: string;

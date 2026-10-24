@@ -6,6 +6,7 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
   Unique,
+  type Relation,
 } from 'typeorm';
 import { UserEntity } from '../../users/infrastructure/user.entity.js';
 import { PostEntity } from './post.entity.js';
@@ -31,7 +32,7 @@ export class PostMentionEntity {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'postId' })
-  post!: PostEntity;
+  post!: Relation<PostEntity>;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;

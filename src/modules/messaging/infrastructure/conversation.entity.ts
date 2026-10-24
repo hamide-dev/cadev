@@ -7,6 +7,7 @@ import {
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
+  type Relation,
 } from 'typeorm';
 import { UserEntity } from '../../users/infrastructure/user.entity.js';
 import { ConversationType } from '../domain/messaging.types.js';
@@ -55,7 +56,7 @@ export class ConversationMemberEntity {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'conversationId' })
-  conversation!: ConversationEntity;
+  conversation!: Relation<ConversationEntity>;
 
   @Column({ type: 'uuid' })
   userId!: string;

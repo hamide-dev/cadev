@@ -8,6 +8,7 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
+  type Relation,
 } from 'typeorm';
 import { UserEntity } from '../../users/infrastructure/user.entity.js';
 import { ProjectTaskStatus } from '../domain/project.types.js';
@@ -24,7 +25,7 @@ export class ProjectTaskEntity {
 
   @ManyToOne(() => ProjectEntity, { nullable: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'projectId' })
-  project!: ProjectEntity;
+  project!: Relation<ProjectEntity>;
 
   @Column({ type: 'varchar', length: 120 })
   title!: string;
