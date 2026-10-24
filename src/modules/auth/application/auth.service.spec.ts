@@ -7,8 +7,9 @@ import { createHmac } from 'node:crypto';
 import { AuthService } from './auth.service.js';
 import { UsersService } from '../../users/application/users.service.js';
 import { UserEntity } from '../../users/infrastructure/user.entity.js';
-import { BrevoSmtpService } from '../infrastructure/brevo-smtp.service.js';
+import { BrevoEmailService } from '../infrastructure/brevo-email.service.js';
 import { EmailVerificationEntity } from '../infrastructure/email-verification.entity.js';
+import { PendingRegistrationEntity } from '../infrastructure/pending-registration.entity.js';
 
 describe('AuthService', () => {
   const password = 'correct-horse-battery-staple';
@@ -32,14 +33,11 @@ describe('AuthService', () => {
   user.createdAt = new Date();
   user.updatedAt = new Date();
 
-  it('registers and returns an explicit public projection, never the hash', async () => {
-    const passwordHash = await bcrypt.hash(password, 4);
+  it('stores only a pending registration until the email code is verified', async () => {
     const usersService = {
-      create: vi
-        .fn()
-        .mockResolvedValue(
-          Object.assign(new UserEntity(), user, { passwordHash }),
-        ),
+      create: vi.fn(),
+      findByEmail: vi.fn().mockResolvedValue(null),
+      findByUsername: vi.fn().mockResolvedValue(null),
       toPublic: vi.fn().mockReturnValue(publicUser),
     };
     const jwtService = {
@@ -47,6 +45,12 @@ describe('AuthService', () => {
     };
     const emailVerifications = {
       upsert: vi.fn().mockResolvedValue(undefined),
+    };
+    const pendingRegistrations = {
+      delete: vi.fn().mockResolvedValue(undefined),
+      findOneBy: vi.fn().mockResolvedValue(null),
+      create: vi.fn((value: object) => value),
+      save: vi.fn().mockImplementation((value) => Promise.resolve(value)),
     };
     const brevoSmtp = {
       sendVerificationCode: vi.fn().mockResolvedValue(undefined),
@@ -56,7 +60,7 @@ describe('AuthService', () => {
         AuthService,
         { provide: UsersService, useValue: usersService },
         { provide: JwtService, useValue: jwtService },
-        { provide: BrevoSmtpService, useValue: brevoSmtp },
+        { provide: BrevoEmailService, useValue: brevoSmtp },
         {
           provide: ConfigService,
           useValue: { get: vi.fn().mockReturnValue('test-secret') },
@@ -64,6 +68,10 @@ describe('AuthService', () => {
         {
           provide: getRepositoryToken(EmailVerificationEntity),
           useValue: emailVerifications,
+        },
+        {
+          provide: getRepositoryToken(PendingRegistrationEntity),
+          useValue: pendingRegistrations,
         },
       ],
     }).compile();
@@ -76,18 +84,21 @@ describe('AuthService', () => {
       password,
     });
 
-    expect(usersService.create).toHaveBeenCalledWith(
+    expect(usersService.create).not.toHaveBeenCalled();
+    expect(pendingRegistrations.save).toHaveBeenCalledWith(
       expect.objectContaining({
         email: 'dev@example.test',
         username: 'dev_user',
         passwordHash: expect.any(String),
-        emailVerified: false,
+        codeHash: expect.any(String),
+        attempts: 0,
+        expiresAt: expect.any(Date),
       }),
     );
     expect(
       await bcrypt.compare(
         password,
-        usersService.create.mock.calls[0]![0].passwordHash,
+        pendingRegistrations.save.mock.calls[0]![0].passwordHash,
       ),
     ).toBe(true);
     expect(response).toMatchObject({
@@ -100,15 +111,7 @@ describe('AuthService', () => {
       expect.stringMatching(/^\d{4}$/),
       'registration',
     );
-    expect(emailVerifications.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        userId: user.id,
-        codeHash: expect.any(String),
-        attempts: 0,
-        expiresAt: expect.any(Date),
-      }),
-      ['userId'],
-    );
+    expect(emailVerifications.upsert).not.toHaveBeenCalled();
     expect(jwtService.signAsync).not.toHaveBeenCalled();
   });
 
@@ -122,7 +125,7 @@ describe('AuthService', () => {
         { provide: UsersService, useValue: usersService },
         { provide: JwtService, useValue: { signAsync: vi.fn() } },
         {
-          provide: BrevoSmtpService,
+          provide: BrevoEmailService,
           useValue: { sendVerificationCode: vi.fn() },
         },
         {
@@ -131,6 +134,10 @@ describe('AuthService', () => {
         },
         {
           provide: getRepositoryToken(EmailVerificationEntity),
+          useValue: {},
+        },
+        {
+          provide: getRepositoryToken(PendingRegistrationEntity),
           useValue: {},
         },
       ],
@@ -182,7 +189,7 @@ describe('AuthService', () => {
         { provide: UsersService, useValue: usersService },
         { provide: JwtService, useValue: jwtService },
         {
-          provide: BrevoSmtpService,
+          provide: BrevoEmailService,
           useValue: { sendVerificationCode: vi.fn() },
         },
         {
@@ -192,6 +199,12 @@ describe('AuthService', () => {
         {
           provide: getRepositoryToken(EmailVerificationEntity),
           useValue: emailVerifications,
+        },
+        {
+          provide: getRepositoryToken(PendingRegistrationEntity),
+          useValue: {
+            findOneBy: vi.fn().mockResolvedValue(null),
+          },
         },
       ],
     }).compile();
@@ -213,6 +226,82 @@ describe('AuthService', () => {
     });
   });
 
+  it('creates a verified account only after the pending email code matches', async () => {
+    const registrationId = '6fa460cf-9240-4bc2-9732-adf9719dd5a9';
+    const code = '3147';
+    const codeHash = createHmac('sha256', 'test-secret')
+      .update(`registration:${registrationId}:${code}`)
+      .digest('hex');
+    const verifiedUser = Object.assign(new UserEntity(), user, {
+      emailVerified: true,
+    });
+    const usersService = {
+      create: vi.fn().mockResolvedValue(verifiedUser),
+      toPublic: vi.fn().mockReturnValue(publicUser),
+    };
+    const pending = Object.assign(new PendingRegistrationEntity(), {
+      id: registrationId,
+      email: user.email,
+      username: user.username,
+      displayName: user.displayName,
+      passwordHash: 'stored-password-hash',
+      codeHash,
+      attempts: 0,
+      expiresAt: new Date(Date.now() + 60_000),
+    });
+    const pendingRegistrations = {
+      findOneBy: vi.fn().mockResolvedValue(pending),
+      increment: vi.fn().mockResolvedValue({ affected: 1 }),
+      delete: vi.fn().mockResolvedValue(undefined),
+    };
+    const jwtService = {
+      signAsync: vi.fn().mockResolvedValue('access-token'),
+    };
+    const testingModule = await Test.createTestingModule({
+      providers: [
+        AuthService,
+        { provide: UsersService, useValue: usersService },
+        { provide: JwtService, useValue: jwtService },
+        {
+          provide: BrevoEmailService,
+          useValue: { sendVerificationCode: vi.fn() },
+        },
+        {
+          provide: ConfigService,
+          useValue: { get: vi.fn().mockReturnValue('test-secret') },
+        },
+        {
+          provide: getRepositoryToken(EmailVerificationEntity),
+          useValue: {},
+        },
+        {
+          provide: getRepositoryToken(PendingRegistrationEntity),
+          useValue: pendingRegistrations,
+        },
+      ],
+    }).compile();
+
+    await expect(
+      testingModule.get(AuthService).verifyEmail({
+        email: user.email,
+        code,
+      }),
+    ).resolves.toMatchObject({
+      accessToken: 'access-token',
+      user: publicUser,
+    });
+    expect(usersService.create).toHaveBeenCalledWith({
+      email: user.email,
+      username: user.username,
+      displayName: user.displayName,
+      passwordHash: 'stored-password-hash',
+      emailVerified: true,
+    });
+    expect(pendingRegistrations.delete).toHaveBeenCalledWith({
+      id: registrationId,
+    });
+  });
+
   it('sends a four-digit login code without revealing unknown accounts', async () => {
     const verifiedUser = Object.assign(new UserEntity(), user, {
       emailVerified: true,
@@ -231,7 +320,7 @@ describe('AuthService', () => {
         AuthService,
         { provide: UsersService, useValue: usersService },
         { provide: JwtService, useValue: { signAsync: vi.fn() } },
-        { provide: BrevoSmtpService, useValue: brevoSmtp },
+        { provide: BrevoEmailService, useValue: brevoSmtp },
         {
           provide: ConfigService,
           useValue: { get: vi.fn().mockReturnValue('test-secret') },
@@ -239,6 +328,10 @@ describe('AuthService', () => {
         {
           provide: getRepositoryToken(EmailVerificationEntity),
           useValue: emailVerifications,
+        },
+        {
+          provide: getRepositoryToken(PendingRegistrationEntity),
+          useValue: {},
         },
       ],
     }).compile();

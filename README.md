@@ -33,8 +33,10 @@ Routes disponibles :
 
 Parcours disponibles dans cette première tranche :
 
-- `POST /api/v1/auth/register` envoie un code OTP de vérification par Brevo ;
-  `POST /api/v1/auth/email/verify` confirme l'adresse et délivre le JWT ;
+- `POST /api/v1/auth/register` enregistre une inscription temporaire et envoie
+  un code OTP par Brevo ; aucun compte utilisateur ni jeton n'est créé à cette
+  étape. `POST /api/v1/auth/email/verify` crée le compte vérifié et délivre le
+  JWT après validation du code ;
   `POST /api/v1/auth/email/resend` renvoie un code si nécessaire
 - `POST /api/v1/auth/login` pour les comptes e-mail/mot de passe vérifiés
 - `POST /api/v1/auth/login/code` puis `POST /api/v1/auth/login/verify` pour
@@ -83,8 +85,7 @@ Parcours disponibles dans cette première tranche :
 | `CLOUDINARY_CLOUD_NAME` | Optionnel | Nom du compte Cloudinary |
 | `CLOUDINARY_API_KEY` | Optionnel | Clé publique Cloudinary |
 | `CLOUDINARY_API_SECRET` | Optionnel | Secret privé Cloudinary, serveur uniquement |
-| `BREVO_SMTP_USER` | Optionnel | Identifiant SMTP Brevo |
-| `BREVO_SMTP_KEY` | Optionnel | Clé SMTP Brevo (ne pas confondre avec une clé API) |
+| `BREVO_API_KEY` | Optionnel | Clé API Brevo, serveur uniquement, pour l'API d'e-mails transactionnels |
 | `BREVO_SENDER_EMAIL` | Optionnel | Adresse expéditrice validée dans Brevo |
 | `BREVO_SENDER_NAME` | Optionnel | Nom expéditeur, défaut `Hello World` |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_CALLBACK_URL` | Optionnel | Identifiants et callback OAuth Google |
@@ -94,13 +95,18 @@ Voir [.env.example](./.env.example) pour le gabarit sans secret.
 Les trois paramètres Cloudinary peuvent rester vides pendant le développement ;
 les opérations médias répondent alors `503 MEDIA_PROVIDER_NOT_CONFIGURED`.
 Ils doivent être définis ensemble pour activer le service.
-Les paramètres SMTP Brevo sont requis ensemble pour envoyer les OTP ; les
+`BREVO_API_KEY` et `BREVO_SENDER_EMAIL` sont requis ensemble pour envoyer les
+OTP via l'API Brevo ; l'adresse d'expéditeur doit être validée dans Brevo. Les
 inscriptions locales restent bloquées à l'étape de vérification tant que le
 service d'e-mail n'est pas configuré. Chaque fournisseur OAuth est optionnel,
 mais ses trois paramètres doivent être définis ensemble. L'OTP à 4 chiffres
 est demandé lors de l'inscription locale et peut aussi servir à la connexion
 par e-mail ; la connexion par mot de passe reste disponible. Google et GitHub
 doivent retourner une adresse e-mail vérifiée.
+En local, les erreurs d'envoi Brevo sont journalisées par l'API sans inclure
+la clé, le code OTP ou l'adresse du destinataire. Le frontend affiche le code
+métier et écrit les détails HTTP dans la console du navigateur en mode Vite
+développement ; ces diagnostics ne sont pas activés dans un build de production.
 
 ## Scripts utiles
 
@@ -111,10 +117,13 @@ npm run test:e2e
 npm run lint
 ```
 
-Applique le schéma initial avec `npm run migration:run` après avoir configuré
-`.env`. `npm run migration:revert` annule la migration la plus récente. Les
-migrations seront la seule façon de faire évoluer le schéma ; la synchronisation
-TypeORM est désactivée.
+En développement local (`NODE_ENV=development`), TypeORM synchronise le schéma
+au démarrage. Cette option est désactivée en test et en production. En
+production, applique les migrations avec `npm run migration:run` après avoir
+configuré `.env` ; `npm run migration:revert` annule la migration la plus
+récente. Ne combine pas la synchronisation automatique locale avec l'exécution
+des migrations sur la même base, car les deux mécanismes peuvent modifier le
+même schéma.
 
 ## Architecture et contrats
 

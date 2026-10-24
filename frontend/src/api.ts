@@ -162,6 +162,11 @@ const MESSAGES: Record<string, string> = {
   EMAIL_ALREADY_VERIFIED: 'Cette adresse est déjà vérifiée, tu peux te connecter.',
   EMAIL_VERIFICATION_REQUIRED: "Ton adresse n'est pas encore vérifiée. Termine l'inscription avec le code reçu.",
   EMAIL_PROVIDER_NOT_CONFIGURED: "L'envoi d'e-mails n'est pas encore configuré sur ce serveur. Connecte-toi avec ton mot de passe.",
+  EMAIL_PROVIDER_AUTH_FAILED: "Brevo refuse la clé API. Vérifie que BREVO_API_KEY est active et qu'il s'agit d'une clé API, pas d'une clé SMTP.",
+  EMAIL_PROVIDER_IP_NOT_AUTHORIZED: "Brevo bloque l'adresse IP publique du backend. Dans SMTP & API → API keys & MCP, autorise l'IP publique sortante de la machine qui exécute le backend.",
+  EMAIL_PROVIDER_UNAVAILABLE: "Impossible de joindre Brevo. Vérifie la connexion du serveur puis réessaie.",
+  EMAIL_PROVIDER_RATE_LIMITED: "Brevo limite temporairement l'envoi. Patiente avant de redemander un code.",
+  EMAIL_PROVIDER_SEND_FAILED: "Brevo a refusé l'envoi. Vérifie que l'expéditeur est validé dans Brevo.",
   ACCOUNT_ALREADY_EXISTS: 'Un compte existe déjà avec cet e-mail ou ce pseudo.',
   CANNOT_FOLLOW_SELF: 'Tu ne peux pas te suivre toi-même.',
   USER_NOT_FOUND: "Ce développeur n'existe pas.",
@@ -227,6 +232,13 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   const data = await response.json().catch(() => null);
   if (!response.ok) {
     const code: string = data?.code ?? data?.error ?? 'HTTP_ERROR';
+    if (import.meta.env.DEV) {
+      console.error(`[API] ${method} ${path} failed`, {
+        status: response.status,
+        code,
+        message: data?.message,
+      });
+    }
     if (response.status === 401 && token) onUnauthorized();
     throw new ApiError(
       response.status,

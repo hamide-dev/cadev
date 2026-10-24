@@ -51,4 +51,28 @@ describe('validateEnvironment', () => {
       }),
     ).toThrow('CORS_ORIGINS contains an invalid HTTP(S) origin');
   });
+
+  it('accepts Brevo API credentials and sender details', () => {
+    expect(
+      validateEnvironment({
+        ...validEnvironment,
+        BREVO_API_KEY: 'brevo-api-key',
+        BREVO_SENDER_EMAIL: 'sender@example.test',
+        BREVO_SENDER_NAME: 'Hello World',
+      }),
+    ).toMatchObject({
+      BREVO_API_KEY: 'brevo-api-key',
+      BREVO_SENDER_EMAIL: 'sender@example.test',
+      BREVO_SENDER_NAME: 'Hello World',
+    });
+  });
+
+  it('requires the Brevo API key and sender email together', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validEnvironment,
+        BREVO_API_KEY: 'brevo-api-key',
+      }),
+    ).toThrow('BREVO_API_KEY and BREVO_SENDER_EMAIL must be configured together');
+  });
 });

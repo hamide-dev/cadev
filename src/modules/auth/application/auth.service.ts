@@ -1,19 +1,20 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { createHmac, randomInt, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
 import * as bcrypt from 'bcrypt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LessThan, Repository } from 'typeorm';
 import type { Environment } from '../../../config/environment.js';
 import { UsersService } from '../../users/application/users.service.js';
 import { EmailVerificationEntity } from '../infrastructure/email-verification.entity.js';
-import { BrevoSmtpService } from '../infrastructure/brevo-smtp.service.js';
+import { BrevoEmailService } from '../infrastructure/brevo-email.service.js';
 import type { PublicUser } from '../../users/domain/user.types.js';
 import type { RegisterDto } from '../presentation/dto/register.dto.js';
 import type { LoginDto } from '../presentation/dto/login.dto.js';
@@ -22,6 +23,7 @@ import type { VerifyEmailDto } from '../presentation/dto/verify-email.dto.js';
 import type { VerifyLoginCodeDto } from '../presentation/dto/verify-login-code.dto.js';
 import type { OAuthIdentity } from '../domain/oauth-identity.js';
 import type { EmailVerificationPurpose } from '../infrastructure/email-verification.entity.js';
+import { PendingRegistrationEntity } from '../infrastructure/pending-registration.entity.js';
 
 export interface AuthResponse {
   accessToken: string;
@@ -53,33 +55,63 @@ export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
-    private readonly brevoSmtp: BrevoSmtpService,
+    private readonly brevoEmail: BrevoEmailService,
     private readonly config: ConfigService<Environment, true>,
     @InjectRepository(EmailVerificationEntity)
     private readonly emailVerifications: Repository<EmailVerificationEntity>,
+    @InjectRepository(PendingRegistrationEntity)
+    private readonly pendingRegistrations: Repository<PendingRegistrationEntity>,
   ) {}
 
   async register(input: RegisterDto): Promise<RegistrationResponse> {
     assertBcryptPasswordLength(input.password);
-    const user = await this.usersService.create({
-      email: input.email.trim().toLowerCase(),
-      username: input.username.trim().toLowerCase(),
-      displayName: input.displayName.trim(),
-      passwordHash: await bcrypt.hash(input.password, 12),
-      emailVerified: false,
+    const email = input.email.trim().toLowerCase();
+    const username = input.username.trim().toLowerCase();
+
+    await this.pendingRegistrations.delete({ expiresAt: LessThan(new Date()) });
+    if (await this.usersService.findByEmail(email)) {
+      throw registrationConflict('An account with this email already exists.');
+    }
+    if (await this.usersService.findByUsername(username)) {
+      throw registrationConflict('This username is already in use.');
+    }
+
+    const pendingWithUsername = await this.pendingRegistrations.findOneBy({
+      username,
     });
-    await this.sendVerificationCode(user.id, user.email);
+    const pending = await this.pendingRegistrations.findOneBy({ email });
+    if (pendingWithUsername && pendingWithUsername.email !== email) {
+      throw registrationConflict('This username is already in use.');
+    }
+    const registration =
+      pending ??
+      this.pendingRegistrations.create({
+        id: randomUUID(),
+        email,
+        username,
+        displayName: input.displayName.trim(),
+        passwordHash: '',
+        codeHash: '',
+        attempts: 0,
+        expiresAt: new Date(),
+      });
+    registration.username = username;
+    registration.displayName = input.displayName.trim();
+    registration.passwordHash = await bcrypt.hash(input.password, 12);
+    await this.sendPendingRegistrationCode(registration);
     return {
       message: 'A verification code has been sent to your email address.',
-      email: user.email,
+      email,
       expiresIn: VERIFICATION_TTL_MS / 1000,
     };
   }
 
   async verifyEmail(input: VerifyEmailDto): Promise<AuthResponse> {
-    const user = await this.usersService.findByEmail(
-      input.email.trim().toLowerCase(),
-    );
+    const email = input.email.trim().toLowerCase();
+    const pending = await this.pendingRegistrations.findOneBy({ email });
+    if (pending) return this.verifyPendingRegistration(pending, input.code);
+
+    const user = await this.usersService.findByEmail(email);
     if (!user) {
       throw invalidVerificationCode();
     }
@@ -137,8 +169,12 @@ export class AuthService {
 
   async resendVerificationCode(email: string): Promise<RegistrationResponse> {
     const normalizedEmail = email.trim().toLowerCase();
+    const pending = await this.pendingRegistrations.findOneBy({
+      email: normalizedEmail,
+    });
+    if (pending) await this.sendPendingRegistrationCode(pending);
     const user = await this.usersService.findByEmail(normalizedEmail);
-    if (user && !user.emailVerified) {
+    if (!pending && user && !user.emailVerified) {
       await this.sendVerificationCode(user.id, user.email);
     }
     return {
@@ -268,7 +304,74 @@ export class AuthService {
       },
       ['userId'],
     );
-    await this.brevoSmtp.sendVerificationCode(email, code, purpose);
+    await this.brevoEmail.sendVerificationCode(email, code, purpose);
+  }
+
+  private async sendPendingRegistrationCode(
+    pending: PendingRegistrationEntity,
+  ): Promise<void> {
+    const code = randomInt(0, 10_000).toString().padStart(4, '0');
+    pending.codeHash = this.hashVerificationCode(
+      pending.id,
+      code,
+      'registration',
+    );
+    pending.attempts = 0;
+    pending.expiresAt = new Date(Date.now() + VERIFICATION_TTL_MS);
+    await this.pendingRegistrations.save(pending);
+    await this.brevoEmail.sendVerificationCode(
+      pending.email,
+      code,
+      'registration',
+    );
+  }
+
+  private async verifyPendingRegistration(
+    pending: PendingRegistrationEntity,
+    code: string,
+  ): Promise<AuthResponse> {
+    if (pending.expiresAt.getTime() <= Date.now()) {
+      await this.pendingRegistrations.delete({ id: pending.id });
+      throw invalidVerificationCode();
+    }
+    const attempts = await this.pendingRegistrations.increment(
+      { id: pending.id, attempts: LessThan(MAX_VERIFICATION_ATTEMPTS) },
+      'attempts',
+      1,
+    );
+    if (!attempts.affected) {
+      throw new ForbiddenException({
+        code: 'VERIFICATION_ATTEMPTS_EXCEEDED',
+        message: 'Request a new verification code and try again.',
+      });
+    }
+    const expectedHash = this.hashVerificationCode(
+      pending.id,
+      code,
+      'registration',
+    );
+    const storedHash = Buffer.from(pending.codeHash, 'hex');
+    const submittedHash = Buffer.from(expectedHash, 'hex');
+    if (
+      storedHash.length !== submittedHash.length ||
+      !timingSafeEqual(storedHash, submittedHash)
+    ) {
+      throw invalidVerificationCode();
+    }
+
+    const user = await this.usersService.create({
+      email: pending.email,
+      username: pending.username,
+      displayName: pending.displayName,
+      passwordHash: pending.passwordHash,
+      emailVerified: true,
+    });
+    await this.pendingRegistrations.delete({ id: pending.id });
+    return this.issueToken(
+      user.id,
+      user.email,
+      this.usersService.toPublic(user),
+    );
   }
 
   private hashVerificationCode(
@@ -302,5 +405,12 @@ function invalidVerificationCode(): UnauthorizedException {
   return new UnauthorizedException({
     code: 'INVALID_VERIFICATION_CODE',
     message: 'The verification code is invalid or expired.',
+  });
+}
+
+function registrationConflict(message: string): ConflictException {
+  return new ConflictException({
+    code: 'REGISTRATION_CONFLICT',
+    message,
   });
 }

@@ -15,7 +15,8 @@ import type { Environment } from '../config/environment.js';
           ? { rejectUnauthorized: true }
           : false,
         autoLoadEntities: true,
-        synchronize: false,
+        synchronize:
+          config.get('NODE_ENV', { infer: true }) === 'development',
         migrationsRun: false,
         retryAttempts: 5,
         retryDelay: 2000,

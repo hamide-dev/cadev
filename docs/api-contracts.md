@@ -94,8 +94,8 @@ depuis un champ `userId` fourni par le client.
 
 | Méthode et chemin | Auth. | Entrée / sortie principale | Règles notables |
 |---|---|---|---|
-| `POST /auth/register` | Non | `email`, `username`, `displayName`, `password` → statut d'envoi OTP | Disponible ; aucun token avant vérification ; code à 4 chiffres valable 10 min, 5 tentatives maximum. |
-| `POST /auth/email/verify` | Non | `email`, `code` → access JWT + utilisateur public | Disponible ; valide l'adresse et consomme le code. |
+| `POST /auth/register` | Non | `email`, `username`, `displayName`, `password` → statut d'envoi OTP | Disponible ; conserve uniquement une inscription en attente, aucun compte utilisateur ni token avant vérification ; code à 4 chiffres valable 10 min, 5 tentatives maximum. |
+| `POST /auth/email/verify` | Non | `email`, `code` → access JWT + utilisateur public | Disponible ; crée le compte avec l'adresse vérifiée uniquement après validation du code et consomme l'inscription en attente. |
 | `POST /auth/email/resend` | Non | `email` → statut générique d'envoi | Disponible ; limite de débit, ne révèle pas si un compte existe. |
 | `POST /auth/login` | Non | e-mail + mot de passe → access JWT + utilisateur public | Disponible ; réservé aux comptes vérifiés ; limitation de débit. |
 | `POST /auth/login/code`, `POST /auth/login/verify` | Non | e-mail puis code à 4 chiffres → access JWT + utilisateur public | Disponible ; OTP à durée limitée et à usage unique ; réponse d'envoi générique. |

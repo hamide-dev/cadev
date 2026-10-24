@@ -8,8 +8,7 @@ export interface Environment {
   CLOUDINARY_CLOUD_NAME?: string;
   CLOUDINARY_API_KEY?: string;
   CLOUDINARY_API_SECRET?: string;
-  BREVO_SMTP_USER?: string;
-  BREVO_SMTP_KEY?: string;
+  BREVO_API_KEY?: string;
   BREVO_SENDER_EMAIL?: string;
   BREVO_SENDER_NAME?: string;
   GOOGLE_CLIENT_ID?: string;
@@ -100,16 +99,14 @@ export function validateEnvironment(raw: RawEnvironment): Environment {
   if (cloudinaryCloudName && !/^[a-zA-Z0-9_-]+$/.test(cloudinaryCloudName)) {
     throw new Error('CLOUDINARY_CLOUD_NAME has an invalid format');
   }
-  const brevoValues = [
-    optionalString(raw, 'BREVO_SMTP_USER'),
-    optionalString(raw, 'BREVO_SMTP_KEY'),
-    optionalString(raw, 'BREVO_SENDER_EMAIL'),
-  ];
+  const brevoApiKey = optionalString(raw, 'BREVO_API_KEY');
+  const brevoSenderEmail = optionalString(raw, 'BREVO_SENDER_EMAIL');
+  const brevoSenderName = optionalString(raw, 'BREVO_SENDER_NAME');
   assertOptionalGroup(
-    brevoValues,
-    'BREVO_SMTP_USER, BREVO_SMTP_KEY, and BREVO_SENDER_EMAIL must be configured together',
+    [brevoApiKey, brevoSenderEmail],
+    'BREVO_API_KEY and BREVO_SENDER_EMAIL must be configured together',
   );
-  if (brevoValues[2] && !isEmailAddress(brevoValues[2])) {
+  if (brevoSenderEmail && !isEmailAddress(brevoSenderEmail)) {
     throw new Error('BREVO_SENDER_EMAIL must be a valid email address');
   }
   const googleValues = [
@@ -178,14 +175,11 @@ export function validateEnvironment(raw: RawEnvironment): Environment {
           CLOUDINARY_API_SECRET: cloudinaryApiSecret,
         }
       : {}),
-    ...(brevoValues[0]
+    ...(brevoApiKey
       ? {
-          BREVO_SMTP_USER: brevoValues[0],
-          BREVO_SMTP_KEY: brevoValues[1],
-          BREVO_SENDER_EMAIL: brevoValues[2],
-          ...(optionalString(raw, 'BREVO_SENDER_NAME')
-            ? { BREVO_SENDER_NAME: optionalString(raw, 'BREVO_SENDER_NAME') }
-            : {}),
+          BREVO_API_KEY: brevoApiKey,
+          BREVO_SENDER_EMAIL: brevoSenderEmail,
+          ...(brevoSenderName ? { BREVO_SENDER_NAME: brevoSenderName } : {}),
         }
       : {}),
     ...(googleValues[0]

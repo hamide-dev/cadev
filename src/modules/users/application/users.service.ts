@@ -69,6 +69,10 @@ export class UsersService {
     return this.users.findOneBy({ email });
   }
 
+  async findByUsername(username: string): Promise<UserEntity | null> {
+    return this.users.findOneBy({ username });
+  }
+
   async findByOAuthIdentity(
     provider: 'google' | 'github',
     providerId: string,
