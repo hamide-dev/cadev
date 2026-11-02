@@ -23,6 +23,7 @@ export function Profile() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<'posts' | 'projects' | 'contributions'>('posts');
   const [following, setFollowing] = useState(false);
+  const [friend, setFriend] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const mine = username.toLowerCase() === me.username.toLowerCase();
@@ -52,8 +53,14 @@ export function Profile() {
   const toggleFollow = async () => {
     setBusy(true);
     try {
-      await (following ? api.unfollow(user.username) : api.follow(user.username));
+      const result = following
+        ? await api.unfollow(user.username)
+        : await api.follow(user.username);
       setFollowing(!following);
+      if (!following && result.friend) {
+        setFriend(true);
+        setNotice('Vous êtes maintenant amis. Une conversation a été ajoutée à vos messages.');
+      }
     } catch (err) {
       setNotice(errorMessage(err));
     } finally {
@@ -99,10 +106,10 @@ export function Profile() {
             ) : (
               <>
                 <button type="button" className="btn" style={{ borderRadius: 999 }} onClick={message} disabled={busy}>
-                  Message
+                  {friend ? 'Message' : 'Message'}
                 </button>
                 <button type="button" className={`btn ${following ? '' : 'btn-primary'}`} style={{ borderRadius: 999 }} aria-pressed={following} onClick={toggleFollow} disabled={busy}>
-                  {following ? 'Abonné' : 'Suivre'}
+                  {friend ? 'Ami' : following ? 'Abonné' : 'Suivre'}
                 </button>
               </>
             )}

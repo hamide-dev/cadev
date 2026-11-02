@@ -33,6 +33,16 @@ export interface Media {
   bytes: number;
   url: string;
 }
+export interface Notification {
+  id: string;
+  type: 'MENTION';
+  actor: User;
+  message: string;
+  postId: string | null;
+  commentId: string | null;
+  readAt: string | null;
+  createdAt: string;
+}
 
 export interface Post {
   id: string;
@@ -162,11 +172,11 @@ const MESSAGES: Record<string, string> = {
   EMAIL_ALREADY_VERIFIED: 'Cette adresse est déjà vérifiée, tu peux te connecter.',
   EMAIL_VERIFICATION_REQUIRED: "Ton adresse n'est pas encore vérifiée. Termine l'inscription avec le code reçu.",
   EMAIL_PROVIDER_NOT_CONFIGURED: "L'envoi d'e-mails n'est pas encore configuré sur ce serveur. Connecte-toi avec ton mot de passe.",
-  EMAIL_PROVIDER_AUTH_FAILED: "Brevo refuse la clé API. Vérifie que BREVO_API_KEY est active et qu'il s'agit d'une clé API, pas d'une clé SMTP.",
-  EMAIL_PROVIDER_IP_NOT_AUTHORIZED: "Brevo bloque l'adresse IP publique du backend. Dans SMTP & API → API keys & MCP, autorise l'IP publique sortante de la machine qui exécute le backend.",
-  EMAIL_PROVIDER_UNAVAILABLE: "Impossible de joindre Brevo. Vérifie la connexion du serveur puis réessaie.",
-  EMAIL_PROVIDER_RATE_LIMITED: "Brevo limite temporairement l'envoi. Patiente avant de redemander un code.",
-  EMAIL_PROVIDER_SEND_FAILED: "Brevo a refusé l'envoi. Vérifie que l'expéditeur est validé dans Brevo.",
+  EMAIL_PROVIDER_AUTH_FAILED: "Le serveur SMTP a refusé les identifiants configurés. Vérifie SMTP_USER et SMTP_PASSWORD.",
+  EMAIL_PROVIDER_IP_NOT_AUTHORIZED: "Le serveur SMTP n'autorise pas cette machine. Vérifie sa liste d'accès réseau.",
+  EMAIL_PROVIDER_UNAVAILABLE: "Impossible de joindre le serveur SMTP. Vérifie son adresse, son port et son état.",
+  EMAIL_PROVIDER_RATE_LIMITED: "Le serveur SMTP limite temporairement l'envoi. Patiente avant de redemander un code.",
+  EMAIL_PROVIDER_SEND_FAILED: "Le serveur SMTP a refusé l'envoi. Vérifie l'adresse expéditrice autorisée.",
   ACCOUNT_ALREADY_EXISTS: 'Un compte existe déjà avec cet e-mail ou ce pseudo.',
   CANNOT_FOLLOW_SELF: 'Tu ne peux pas te suivre toi-même.',
   USER_NOT_FOUND: "Ce développeur n'existe pas.",
@@ -219,6 +229,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   try {
     response = await fetch(`${BASE}${path}`, {
       method,
+      cache: 'no-store',
       headers: {
         ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -263,6 +274,9 @@ export const api = {
   verifyEmail: (email: string, code: string) => request<AuthResponse>('POST', '/auth/email/verify', { email, code }),
   resendVerification: (email: string) => request<{ message: string }>('POST', '/auth/email/resend', { email }),
   login: (email: string, password: string) => request<AuthResponse>('POST', '/auth/login', { email, password }),
+  requestPasswordReset: (email: string) => request<{ message: string; email: string; expiresIn: number }>('POST', '/auth/password/forgot', { email }),
+  resetPassword: (email: string, code: string, password: string) =>
+    request<{ message: string }>('POST', '/auth/password/reset', { email, code, password }),
   requestLoginCode: (email: string) => request<{ message: string }>('POST', '/auth/login/code', { email }),
   verifyLoginCode: (email: string, code: string) => request<AuthResponse>('POST', '/auth/login/verify', { email, code }),
   oauthUrl: (provider: 'google' | 'github') => `${BASE}/auth/${provider}`,
@@ -271,8 +285,8 @@ export const api = {
   me: () => request<User>('GET', '/users/me'),
   updateMe: (input: Partial<Omit<User, 'id' | 'email' | 'avatarUrl' | 'createdAt'>>) => request<User>('PATCH', '/users/me', input),
   user: (username: string) => request<User>('GET', `/users/${encodeURIComponent(username)}`),
-  follow: (username: string) => request<{ following: true }>('PUT', `/users/${encodeURIComponent(username)}/follow`),
-  unfollow: (username: string) => request<{ following: false }>('DELETE', `/users/${encodeURIComponent(username)}/follow`),
+  follow: (username: string) => request<{ following: true; friend: boolean }>('PUT', `/users/${encodeURIComponent(username)}/follow`),
+  unfollow: (username: string) => request<{ following: false; friend?: false }>('DELETE', `/users/${encodeURIComponent(username)}/follow`),
 
   // Publications
   posts: (cursor?: string | null) => request<Page<Post>>('GET', `/posts${qs({ cursor, limit: 20 })}`),
@@ -310,11 +324,13 @@ export const api = {
   repoPreview: (url: string) => request<RepoPreview>('GET', `/github-preview${qs({ url })}`),
 
   // Médias : signature côté back, envoi direct à Cloudinary, puis confirmation.
-  profileSignature: () => request<UploadSignature>('POST', '/media/profile/signature'),
+  profileSignature: () => request<UploadSignature>('POST', `/media/profile/signature?ts=${Date.now()}`),
   confirmProfile: (publicId: string) => request<{ avatarUrl: string }>('POST', '/media/profile/confirm', { publicId }),
-  postSignature: (resourceType: 'image' | 'video') => request<UploadSignature>('POST', '/media/posts/signature', { resourceType }),
+  postSignature: (resourceType: 'image' | 'video') =>
+    request<UploadSignature>('POST', `/media/posts/signature?ts=${Date.now()}`, { resourceType }),
   confirmPost: (publicId: string, resourceType: 'image' | 'video') =>
     request<Media>('POST', '/media/posts/confirm', { publicId, resourceType }),
+  notifications: () => request<Notification[]>('GET', '/notifications'),
 };
 
 // Doit reprendre exactement les formats signés par le back (media.service.ts),
@@ -322,6 +338,10 @@ export const api = {
 const FORMATS = { profile: 'jpg,jpeg,png,webp', image: 'jpg,jpeg,png,webp,gif', video: 'mp4,webm,mov' };
 
 export async function uploadToCloudinary(sig: UploadSignature, file: File, formats: keyof typeof FORMATS): Promise<void> {
+  const signatureAge = Math.floor(Date.now() / 1000) - sig.timestamp;
+  if (signatureAge < -30 || signatureAge > 300) {
+    throw new ApiError(409, 'STALE_UPLOAD_SIGNATURE', 'La signature Cloudinary a expiré. Demande une nouvelle signature.');
+  }
   if (file.size > sig.maxBytes) {
     throw new ApiError(413, 'TOO_LARGE', `Ce fichier dépasse ${Math.round(sig.maxBytes / 1024 / 1024)} Mo.`);
   }
@@ -334,9 +354,47 @@ export async function uploadToCloudinary(sig: UploadSignature, file: File, forma
   form.set('type', sig.uploadType);
   form.set('overwrite', 'false');
   form.set('allowed_formats', FORMATS[formats]);
-  const response = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/${sig.resourceType}/upload`, {
+  let response: Response;
+  try {
+    response = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/${sig.resourceType}/upload`, {
     method: 'POST',
     body: form,
-  }).catch(() => null);
-  if (!response?.ok) throw new ApiError(502, 'UPLOAD_FAILED', "L'envoi du fichier a échoué. Réessaie.");
+    });
+  } catch {
+    throw new ApiError(502, 'UPLOAD_FAILED', "Cloudinary est inaccessible. Vérifie ta connexion et la configuration média du serveur.");
+  }
+  if (!response.ok) {
+    let detail = '';
+    try {
+      const body = (await response.json()) as { error?: { message?: string } };
+      detail = body.error?.message ? ` ${body.error.message}` : '';
+    } catch {
+      // The provider may return a non-JSON error page.
+    }
+    const stale = /stale request|reported time/i.test(detail);
+    throw new ApiError(
+      response.status,
+      stale ? 'STALE_UPLOAD_SIGNATURE' : 'UPLOAD_FAILED',
+      stale
+        ? 'La signature Cloudinary a expiré. Une nouvelle signature est nécessaire.'
+        : `Cloudinary a refusé le fichier.${detail}`,
+    );
+  }
+}
+
+export async function uploadPostToCloudinary(
+  resourceType: 'image' | 'video',
+  file: File,
+): Promise<Media> {
+  let signature = await api.postSignature(resourceType);
+  try {
+    await uploadToCloudinary(signature, file, resourceType);
+  } catch (error) {
+    if (!(error instanceof ApiError) || error.code !== 'STALE_UPLOAD_SIGNATURE') {
+      throw error;
+    }
+    signature = await api.postSignature(resourceType);
+    await uploadToCloudinary(signature, file, resourceType);
+  }
+  return api.confirmPost(signature.publicId, resourceType);
 }

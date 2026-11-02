@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { api, uploadToCloudinary, type Comment, type Media, type Post, type PostType } from '../api';
+import { api, uploadPostToCloudinary, type Comment, type Media, type Post, type PostType } from '../api';
 import { useMe } from '../auth';
 import {
   Avatar,
@@ -51,14 +51,9 @@ export function Feed() {
         value={tab}
         onChange={(value) => setParams(value === 'following' ? { tab: value } : {})}
       />
-      {tab === 'for-you' && me.interests.length > 0 && (
+      {tab === 'for-you' && (
         <p className="row xs muted section" style={{ gap: 6 }}>
-          <span style={{ color: 'var(--star)' }}>⚡</span> Basé sur vos intérêts{' '}
-          {me.interests.slice(0, 3).map((topic) => (
-            <span key={topic} style={{ color: 'var(--accent)' }}>
-              {topic}
-            </span>
-          ))}
+          Toutes les publications publiques de la communauté
         </p>
       )}
       <PostFeed
@@ -79,9 +74,7 @@ export function Feed() {
                 </Link>
               }
             >
-              {me.interests.length
-                ? 'Aucune publication ne correspond encore à tes intérêts. Lance la conversation.'
-                : 'Choisis tes centres d’intérêt dans ton profil pour que ce fil se remplisse.'}
+              'Publie quelque chose pour lancer la conversation.'
             </Empty>
           )
         }
@@ -439,9 +432,7 @@ export function Compose() {
     setError(null);
     try {
       const kind = file.type.startsWith('video/') ? 'video' : 'image';
-      const sig = await api.postSignature(kind);
-      await uploadToCloudinary(sig, file, kind);
-      const confirmed = await api.confirmPost(sig.publicId, kind);
+      const confirmed = await uploadPostToCloudinary(kind, file);
       setMedia((m) => [...m, confirmed]);
     } catch (err) {
       setError(errorMessage(err));
@@ -648,7 +639,9 @@ export function Compose() {
 const SOON = 'Le serveur ne fournit pas encore cette fonctionnalité. Cet écran se remplira dès qu’elle sera disponible.';
 
 export function Notifications() {
+  const notifications = useLoad(() => api.notifications(), []);
   const [tab, setTab] = useState<'all' | 'mentions' | 'projects'>('all');
+  const items = notifications.data?.filter((item) => tab !== 'projects' || item.type !== 'MENTION') ?? [];
   return (
     <main className="screen with-nav">
       <TopBar avatar title="Notifications" right={<Link to="/settings" className="icon-btn" aria-label="Paramètres"><Icon name="gear" /></Link>} />
@@ -662,9 +655,23 @@ export function Notifications() {
           ['projects', 'Projets'],
         ]}
       />
-      <Empty icon="bell" title="Bientôt : réponses, mentions et projets" action={<Link to="/feed" className="btn">Retour au fil</Link>}>
-        {SOON}
-      </Empty>
+      {notifications.loading && <p className="muted section">Chargement…</p>}
+      {!notifications.loading && items.length === 0 && (
+        <Empty icon="bell" title="Aucune notification" action={<Link to="/feed" className="btn">Retour au fil</Link>}>
+          Les mentions apparaîtront ici.
+        </Empty>
+      )}
+      <section className="section stack">
+        {items.map((item) => (
+          <article className="card row" key={item.id}>
+            <Avatar user={item.actor} link />
+            <div className="grow">
+              <p>{item.message}</p>
+              <p className="xs muted">{new Date(item.createdAt).toLocaleString()}</p>
+            </div>
+          </article>
+        ))}
+      </section>
     </main>
   );
 }

@@ -2,7 +2,7 @@ import { useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api, type Level, type Specialty } from '../api';
 import { useSession } from '../auth';
-import { Avatar, BackButton, Brand, errorMessage, GitHubLogo, GoogleLogo, Icon, INTERESTS, LEVELS, roleLine, Sheet, SPECIALTIES } from '../ui';
+import { Avatar, BackButton, Brand, errorMessage, GitHubLogo, GoogleLogo, Icon, INTERESTS, LEVELS, roleLine, SPECIALTIES } from '../ui';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -96,9 +96,10 @@ export function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [usePassword, setUsePassword] = useState(false);
-  const [codeSent, setCodeSent] = useState(false);
-  const [code, setCode] = useState('');
+  const [forgot, setForgot] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetCode, setResetCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -108,14 +109,9 @@ export function Login() {
     setBusy(true);
     setError(null);
     try {
-      if (usePassword) {
-        signIn(await api.login(email, password));
-        navigate('/feed');
-      } else {
-        await api.requestLoginCode(email);
-        setCode('');
-        setCodeSent(true);
-      }
+      if (password.length < 8) return setError('Le mot de passe doit contenir au moins 8 caractères.');
+      signIn(await api.login(email, password));
+      navigate('/feed');
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -123,16 +119,37 @@ export function Login() {
     }
   };
 
-  const verify = async (value: string) => {
-    setCode(value);
-    if (value.length !== 4) return;
+  const requestReset = async () => {
+    if (!EMAIL.test(email)) return setError('Saisis ton e-mail pour recevoir un code.');
     setBusy(true);
     setError(null);
     try {
-      signIn(await api.verifyLoginCode(email, value));
-      navigate('/feed');
+      await api.requestPasswordReset(email);
+      setResetSent(true);
     } catch (err) {
       setError(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const reset = async () => {
+    if (!/^\d{4}$/.test(resetCode) || newPassword.length < 8) {
+      return setError('Le code doit contenir 4 chiffres et le nouveau mot de passe au moins 8 caractères.');
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await api.resetPassword(email, resetCode, newPassword);
+      setForgot(false);
+      setResetSent(false);
+      setPassword('');
+      setNewPassword('');
+      setResetCode('');
+      setError('Mot de passe réinitialisé. Tu peux te connecter.');
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
       setBusy(false);
     }
   };
@@ -149,12 +166,12 @@ export function Login() {
         </div>
         <div className="spacer" />
         <div className="stack">
-          {error && !codeSent && (
+          {error && (
             <p className="alert" role="alert">
               {error}
             </p>
           )}
-          <div className="field">
+          {!forgot ? <><div className="field">
             <label htmlFor="login-email">E-mail</label>
             <div className="input-wrap">
               <input
@@ -166,27 +183,28 @@ export function Login() {
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
               />
-              {!usePassword && (
-                <button type="submit" className="icon-btn solid" aria-label="Recevoir un code de connexion" disabled={busy}>
-                  {busy ? <span className="spinner" /> : <Icon name="arrow" />}
-                </button>
-              )}
             </div>
           </div>
-          {usePassword && (
-            <>
-              <div className="field">
+          <div className="field">
                 <label htmlFor="login-password">Mot de passe</label>
                 <input id="login-password" className="input" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} />
-              </div>
-              <button type="submit" className="btn btn-primary btn-block" disabled={busy || !password}>
-                {busy ? <span className="spinner" /> : 'Se connecter'}
-              </button>
-            </>
-          )}
-          <button type="button" className="link small" style={{ alignSelf: 'flex-start', color: 'var(--text-2)' }} onClick={() => setUsePassword(!usePassword)}>
-            {usePassword ? 'Recevoir plutôt un code par e-mail' : 'Utiliser mon mot de passe'}
+          </div>
+          <button type="submit" className="btn btn-primary btn-block" disabled={busy || !password}>
+            {busy ? <span className="spinner" /> : 'Se connecter'}
           </button>
+          <button type="button" className="link small" onClick={() => { setForgot(true); setError(null); }}>
+            Mot de passe oublié ?
+          </button></> : <section className="stack">
+            <p className="small muted">Entre ton e-mail pour recevoir un code de réinitialisation.</p>
+            {!resetSent ? <button type="button" className="btn btn-primary btn-block" disabled={busy} onClick={requestReset}>
+              {busy ? <span className="spinner" /> : 'Recevoir le code'}
+            </button> : <>
+              <label className="field"><span>Code reçu</span><input className="input" inputMode="numeric" maxLength={4} value={resetCode} onChange={(e) => setResetCode(e.target.value.replace(/\D/g, ''))} /></label>
+              <label className="field"><span>Nouveau mot de passe</span><input className="input" type="password" minLength={8} maxLength={72} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} /></label>
+              <button type="button" className="btn btn-primary btn-block" disabled={busy} onClick={reset}>Réinitialiser le mot de passe</button>
+            </>}
+            <button type="button" className="link small" onClick={() => { setForgot(false); setError(null); }}>Retour à la connexion</button>
+          </section>}
           <div className="divider">Ou</div>
           <OAuthButtons />
           <div className="row-between small">
@@ -201,28 +219,6 @@ export function Login() {
         </div>
       </form>
 
-      {codeSent && (
-        <Sheet title="Vérification de ton e-mail" onClose={() => setCodeSent(false)}>
-          <p className="center small muted">Tu vas recevoir un code à 4 chiffres à l'adresse {email}.</p>
-          <OtpInput value={code} onChange={verify} invalid={!!error} />
-          {error && (
-            <p className="error-text center" role="alert">
-              {error}
-            </p>
-          )}
-          {busy && (
-            <p className="center" role="status">
-              <span className="spinner" style={{ display: 'inline-block' }} aria-label="Vérification en cours" />
-            </p>
-          )}
-          <p className="center small muted">
-            Tu n'as pas reçu le code ?{' '}
-            <button type="button" className="link" onClick={() => api.requestLoginCode(email).catch((err) => setError(errorMessage(err)))}>
-              Renvoyer
-            </button>
-          </p>
-        </Sheet>
-      )}
     </main>
   );
 }
@@ -291,7 +287,7 @@ export function Signup() {
     }
     if (step === 1) {
       if (!/^[a-zA-Z0-9_]{3,20}$/.test(form.username)) e.username = 'De 3 à 20 caractères : lettres, chiffres et tiret bas, sans espace.';
-      if (form.password.length < 12) e.password = 'Au moins 12 caractères.';
+      if (form.password.length < 8) e.password = 'Au moins 8 caractères.';
     }
     if (step === 3) {
       if (!profile.specialty) e.specialty = 'Choisissez votre spécialité.';
@@ -406,7 +402,7 @@ export function Signup() {
                   <Icon name={showPassword ? 'eyeOff' : 'eye'} />
                 </button>
               </div>
-              <p id="password-hint" className="hint">Utilisez au moins 12 caractères, avec des lettres, des chiffres et un symbole. Évitez un mot de passe déjà utilisé ailleurs.</p>
+              <p id="password-hint" className="hint">Utilisez au moins 8 caractères. Évitez un mot de passe déjà utilisé ailleurs.</p>
               {fieldError('password')}
             </div>
           </div>
