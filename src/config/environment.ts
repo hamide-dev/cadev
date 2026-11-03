@@ -11,6 +11,13 @@ export interface Environment {
   BREVO_API_KEY?: string;
   BREVO_SENDER_EMAIL?: string;
   BREVO_SENDER_NAME?: string;
+  SMTP_HOST?: string;
+  SMTP_PORT?: number;
+  SMTP_SECURE?: boolean;
+  SMTP_USER?: string;
+  SMTP_PASSWORD?: string;
+  SMTP_FROM_EMAIL?: string;
+  SMTP_FROM_NAME?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   GOOGLE_CALLBACK_URL?: string;
@@ -109,6 +116,7 @@ export function validateEnvironment(raw: RawEnvironment): Environment {
   if (brevoSenderEmail && !isEmailAddress(brevoSenderEmail)) {
     throw new Error('BREVO_SENDER_EMAIL must be a valid email address');
   }
+  const smtp = validateSmtp(raw);
   const googleValues = [
     optionalString(raw, 'GOOGLE_CLIENT_ID'),
     optionalString(raw, 'GOOGLE_CLIENT_SECRET'),
@@ -182,6 +190,7 @@ export function validateEnvironment(raw: RawEnvironment): Environment {
           ...(brevoSenderName ? { BREVO_SENDER_NAME: brevoSenderName } : {}),
         }
       : {}),
+    ...smtp,
     ...(googleValues[0]
       ? {
           GOOGLE_CLIENT_ID: googleValues[0],
@@ -196,6 +205,45 @@ export function validateEnvironment(raw: RawEnvironment): Environment {
           GITHUB_CALLBACK_URL: githubValues[2],
         }
       : {}),
+  };
+}
+
+// Optional SMTP relay (e.g. the local Mailpit from docker-compose.yml). When
+// SMTP_HOST is set, verification emails go through SMTP instead of Brevo.
+function validateSmtp(raw: RawEnvironment): Partial<Environment> {
+  const host = optionalString(raw, 'SMTP_HOST');
+  const fromEmail = optionalString(raw, 'SMTP_FROM_EMAIL');
+  assertOptionalGroup(
+    [host, fromEmail],
+    'SMTP_HOST and SMTP_FROM_EMAIL must be configured together',
+  );
+  if (!host || !fromEmail) return {};
+  if (!isEmailAddress(fromEmail)) {
+    throw new Error('SMTP_FROM_EMAIL must be a valid email address');
+  }
+  const portValue = optionalString(raw, 'SMTP_PORT') ?? '587';
+  const port = /^\d+$/.test(portValue) ? Number(portValue) : Number.NaN;
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error('SMTP_PORT must be an integer between 1 and 65535');
+  }
+  const secure = optionalString(raw, 'SMTP_SECURE') ?? 'false';
+  if (secure !== 'true' && secure !== 'false') {
+    throw new Error('SMTP_SECURE must be true or false');
+  }
+  const user = optionalString(raw, 'SMTP_USER');
+  const password = optionalString(raw, 'SMTP_PASSWORD');
+  assertOptionalGroup(
+    [user, password],
+    'SMTP_USER and SMTP_PASSWORD must be configured together',
+  );
+  const fromName = optionalString(raw, 'SMTP_FROM_NAME');
+  return {
+    SMTP_HOST: host,
+    SMTP_PORT: port,
+    SMTP_SECURE: secure === 'true',
+    SMTP_FROM_EMAIL: fromEmail,
+    ...(user ? { SMTP_USER: user, SMTP_PASSWORD: password } : {}),
+    ...(fromName ? { SMTP_FROM_NAME: fromName } : {}),
   };
 }
 

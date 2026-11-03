@@ -88,6 +88,10 @@ Parcours disponibles dans cette première tranche :
 | `BREVO_API_KEY` | Optionnel | Clé API Brevo, serveur uniquement, pour l'API d'e-mails transactionnels |
 | `BREVO_SENDER_EMAIL` | Optionnel | Adresse expéditrice validée dans Brevo |
 | `BREVO_SENDER_NAME` | Optionnel | Nom expéditeur, défaut `Hello World` |
+| `SMTP_HOST`, `SMTP_FROM_EMAIL` | Optionnel | Serveur SMTP et expéditeur. S'ils sont définis, les e-mails passent par SMTP au lieu de Brevo |
+| `SMTP_PORT`, `SMTP_SECURE` | Non | Défaut `587` et `false` (Mailpit local : `1025`, `false`) |
+| `SMTP_USER`, `SMTP_PASSWORD` | Optionnel | Identifiants SMTP, requis ensemble, vides pour Mailpit |
+| `SMTP_FROM_NAME` | Optionnel | Nom expéditeur, défaut `Hello World` |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_CALLBACK_URL` | Optionnel | Identifiants et callback OAuth Google |
 | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_CALLBACK_URL` | Optionnel | Identifiants et callback OAuth GitHub |
 
@@ -103,6 +107,18 @@ mais ses trois paramètres doivent être définis ensemble. L'OTP à 4 chiffres
 est demandé lors de l'inscription locale et peut aussi servir à la connexion
 par e-mail ; la connexion par mot de passe reste disponible. Google et GitHub
 doivent retourner une adresse e-mail vérifiée.
+### Serveur mail local (Mailpit)
+
+Pour recevoir les codes OTP sans compte Brevo, `docker-compose.yml` lance Mailpit :
+
+```powershell
+docker compose up -d
+```
+
+Avec `SMTP_HOST=127.0.0.1`, `SMTP_PORT=1025`, `SMTP_SECURE=false` et un
+`SMTP_FROM_EMAIL` dans `.env`, tous les e-mails envoyés par l'API arrivent dans
+la boîte de test : http://localhost:8025. Sans `SMTP_HOST`, l'API utilise Brevo.
+
 En local, les erreurs d'envoi Brevo sont journalisées par l'API sans inclure
 la clé, le code OTP ou l'adresse du destinataire. Le frontend affiche le code
 métier et écrit les détails HTTP dans la console du navigateur en mode Vite

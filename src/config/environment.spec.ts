@@ -67,6 +67,30 @@ describe('validateEnvironment', () => {
     });
   });
 
+  it('parses the local SMTP relay settings', () => {
+    expect(
+      validateEnvironment({
+        ...validEnvironment,
+        SMTP_HOST: '127.0.0.1',
+        SMTP_PORT: '1025',
+        SMTP_SECURE: 'false',
+        SMTP_USER: '',
+        SMTP_FROM_EMAIL: 'no-reply@example.test',
+      }),
+    ).toMatchObject({
+      SMTP_HOST: '127.0.0.1',
+      SMTP_PORT: 1025,
+      SMTP_SECURE: false,
+      SMTP_FROM_EMAIL: 'no-reply@example.test',
+    });
+  });
+
+  it('requires the SMTP host and sender email together', () => {
+    expect(() =>
+      validateEnvironment({ ...validEnvironment, SMTP_HOST: '127.0.0.1' }),
+    ).toThrow('SMTP_HOST and SMTP_FROM_EMAIL must be configured together');
+  });
+
   it('requires the Brevo API key and sender email together', () => {
     expect(() =>
       validateEnvironment({
