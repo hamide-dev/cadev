@@ -3,6 +3,8 @@ import { LogoMark } from '../components/Brand';
 import { Empty } from '../components/states';
 import { AuthLayout } from '../features/auth/AuthLayout';
 import { Login } from '../features/auth/Login';
+import { OAuthCallback } from '../features/auth/OAuthCallback';
+import { OAuthOnboarding } from '../features/auth/OAuthOnboarding';
 import { Signup } from '../features/auth/Signup';
 import { SignupChoice } from '../features/auth/SignupChoice';
 import { Welcome } from '../features/auth/Welcome';
@@ -46,6 +48,7 @@ export function App() {
   return (
     <Routes>
       <Route path="/" element={<Navigate to={user ? '/feed' : '/welcome'} replace />} />
+      <Route path="/oauth/callback" element={<OAuthCallback />} />
       <Route element={<AuthLayout />}>
         <Route element={<Guests />}>
           <Route path="/welcome" element={<Welcome />} />
@@ -56,6 +59,7 @@ export function App() {
         <Route path="/signup/email" element={<Signup />} />
       </Route>
       <Route element={<Shell />}>
+        <Route path="/signup/oauth" element={<OAuthOnboarding />} />
         <Route path="/feed" element={<Feed />} />
         <Route path="/explore" element={<Explore />} />
         <Route path="/notifications" element={<Notifications />} />

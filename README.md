@@ -93,6 +93,10 @@ Parcours disponibles dans cette première tranche :
 | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_CALLBACK_URL` | Optionnel | Identifiants et callback OAuth GitHub |
 
 Voir [.env.example](./.env.example) pour le gabarit sans secret.
+En développement, l'URI de redirection Google à déclarer dans Google Cloud
+est `http://localhost:3000/api/v1/auth/google/callback`. Après OAuth, l'API
+redirige vers le frontend (`CORS_ORIGINS`) ; un nouveau compte complète ensuite
+sa spécialité, son niveau et ses centres d'intérêt avant d'accéder au fil.
 Les trois paramètres Cloudinary peuvent rester vides pendant le développement ;
 les opérations médias répondent alors `503 MEDIA_PROVIDER_NOT_CONFIGURED`.
 Ils doivent être définis ensemble pour activer le service.

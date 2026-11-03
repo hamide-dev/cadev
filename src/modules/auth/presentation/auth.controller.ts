@@ -1,4 +1,6 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import type { Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
@@ -20,6 +22,7 @@ import {
   OAuthConfigurationGuard,
   OAuthProvider,
 } from './oauth-configuration.guard.js';
+import type { Environment } from '../../../config/environment.js';
 
 interface OAuthRequest {
   user: OAuthIdentity;
@@ -28,7 +31,10 @@ interface OAuthRequest {
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly config: ConfigService<Environment, true>,
+  ) {}
 
   @Post('register')
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
@@ -100,8 +106,11 @@ export class AuthController {
   @OAuthProvider('google')
   @UseGuards(OAuthConfigurationGuard, AuthGuard('google'))
   @ApiOperation({ summary: 'Complete Google sign-in' })
-  googleCallback(@Req() request: OAuthRequest): Promise<AuthResponse> {
-    return this.authService.loginWithOAuth(request.user);
+  async googleCallback(
+    @Req() request: OAuthRequest,
+    @Res() response: Response,
+  ): Promise<void> {
+    await this.redirectOAuthResult(request.user, response);
   }
 
   @Get('github')
@@ -114,7 +123,29 @@ export class AuthController {
   @OAuthProvider('github')
   @UseGuards(OAuthConfigurationGuard, AuthGuard('github'))
   @ApiOperation({ summary: 'Complete GitHub sign-in' })
-  githubCallback(@Req() request: OAuthRequest): Promise<AuthResponse> {
-    return this.authService.loginWithOAuth(request.user);
+  async githubCallback(
+    @Req() request: OAuthRequest,
+    @Res() response: Response,
+  ): Promise<void> {
+    await this.redirectOAuthResult(request.user, response);
+  }
+
+  private async redirectOAuthResult(
+    identity: OAuthIdentity,
+    response: Response,
+  ): Promise<void> {
+    const auth = await this.authService.loginWithOAuth(identity);
+    const needsOnboarding =
+      !auth.user.specialty ||
+      !auth.user.experienceLevel ||
+      auth.user.interests.length === 0;
+    const frontendUrl = this.config.get('CORS_ORIGINS', { infer: true }).split(',')[0]!;
+    const fragment = new URLSearchParams({
+      accessToken: auth.accessToken,
+      expiresIn: String(auth.expiresIn),
+    });
+    response.redirect(
+      `${frontendUrl}/oauth/callback${needsOnboarding ? '?onboarding=1' : ''}#${fragment.toString()}`,
+    );
   }
 }
