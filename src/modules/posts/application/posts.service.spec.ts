@@ -4,6 +4,7 @@ import { MediaService } from '../../media/application/media.service.js';
 import { UserEntity } from '../../users/infrastructure/user.entity.js';
 import { UserFollowEntity } from '../../users/infrastructure/user-follow.entity.js';
 import { PostEntity } from '../infrastructure/post.entity.js';
+import { CommentEntity } from '../infrastructure/comment.entity.js';
 import { PostLikeEntity } from '../infrastructure/post-like.entity.js';
 import { PostMentionEntity } from '../infrastructure/post-mention.entity.js';
 import { QuestionFollowEntity } from '../infrastructure/question-follow.entity.js';
@@ -33,6 +34,9 @@ describe('PostsService', () => {
       createQueryBuilder: vi.fn(),
       ...overrides.likes,
     };
+    const comments = {
+      createQueryBuilder: vi.fn(),
+    };
     const mentions = {
       delete: vi.fn(),
       save: vi.fn(),
@@ -54,6 +58,7 @@ describe('PostsService', () => {
         PostsService,
         { provide: getRepositoryToken(PostEntity), useValue: posts },
         { provide: getRepositoryToken(PostLikeEntity), useValue: likes },
+        { provide: getRepositoryToken(CommentEntity), useValue: comments },
         { provide: getRepositoryToken(PostMentionEntity), useValue: mentions },
         { provide: getRepositoryToken(UserEntity), useValue: users },
         { provide: getRepositoryToken(UserFollowEntity), useValue: follows },

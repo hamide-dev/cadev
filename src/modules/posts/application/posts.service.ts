@@ -15,6 +15,7 @@ import { UserEntity } from '../../users/infrastructure/user.entity.js';
 import { UserFollowEntity } from '../../users/infrastructure/user-follow.entity.js';
 import { PostType, type PublicPost } from '../domain/post.types.js';
 import { PostEntity } from '../infrastructure/post.entity.js';
+import { CommentEntity } from '../infrastructure/comment.entity.js';
 import { PostLikeEntity } from '../infrastructure/post-like.entity.js';
 import { PostMentionEntity } from '../infrastructure/post-mention.entity.js';
 import { QuestionFollowEntity } from '../infrastructure/question-follow.entity.js';
@@ -39,6 +40,8 @@ export class PostsService {
     private readonly posts: Repository<PostEntity>,
     @InjectRepository(PostLikeEntity)
     private readonly likes: Repository<PostLikeEntity>,
+    @InjectRepository(CommentEntity)
+    private readonly comments: Repository<CommentEntity>,
     @InjectRepository(PostMentionEntity)
     private readonly mentions: Repository<PostMentionEntity>,
     @InjectRepository(UserEntity)
@@ -312,7 +315,7 @@ export class PostsService {
   ): Promise<PublicPost[]> {
     if (posts.length === 0) return [];
     const ids = posts.map((post) => post.id);
-    const [attachments, viewerLikes, likeCounts] = await Promise.all([
+    const [attachments, viewerLikes, likeCounts, commentCounts] = await Promise.all([
       this.mediaService.getPublicPostAttachments(ids),
       viewerId ? this.likes.find({ where: { userId: viewerId, postId: In(ids) } }) : [],
       this.likes
@@ -322,10 +325,20 @@ export class PostsService {
         .where('like.postId IN (:...ids)', { ids })
         .groupBy('like.postId')
         .getRawMany<{ postId: string; count: string }>(),
+      this.comments
+        .createQueryBuilder('comment')
+        .select('comment.postId', 'postId')
+        .addSelect('COUNT(*)', 'count')
+        .where('comment.postId IN (:...ids)', { ids })
+        .groupBy('comment.postId')
+        .getRawMany<{ postId: string; count: string }>(),
     ]);
     const likedIds = new Set(viewerLikes.map((like) => like.postId));
     const counts = new Map(
       likeCounts.map((entry) => [entry.postId, Number(entry.count)]),
+    );
+    const commentCountByPostId = new Map(
+      commentCounts.map((entry) => [entry.postId, Number(entry.count)]),
     );
     return posts.map((post) =>
       mapPost(
@@ -333,6 +346,7 @@ export class PostsService {
         attachments.get(post.id) ?? [],
         viewerId ? likedIds.has(post.id) : undefined,
         counts.get(post.id) ?? 0,
+        commentCountByPostId.get(post.id) ?? 0,
       ),
     );
   }
@@ -456,6 +470,7 @@ function mapPost(
   attachments: PublicPostMedia[],
   likedByMe: boolean | undefined,
   likeCount: number,
+  commentCount: number,
 ): PublicPost {
   if (!post.author) {
     throw new Error('Post author must be loaded to map a public post');
@@ -469,6 +484,7 @@ function mapPost(
     isDraft: post.isDraft,
     isPinned: post.isPinned,
     likeCount,
+    commentCount,
     ...(likedByMe === undefined ? {} : { likedByMe }),
     mentions: (post.mentions ?? []).map((mention) => mention.user.username),
     attachments,

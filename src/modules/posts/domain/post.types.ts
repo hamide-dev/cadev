@@ -21,6 +21,7 @@ export interface PublicPost {
   isDraft: boolean;
   isPinned: boolean;
   likeCount: number;
+  commentCount: number;
   likedByMe?: boolean;
   mentions: string[];
   attachments: PublicPostMedia[];

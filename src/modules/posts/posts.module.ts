@@ -20,6 +20,7 @@ import { PostsController } from './presentation/posts.controller.js';
     TypeOrmModule.forFeature([
       PostEntity,
       CommentEntity,
+      CommentEntity,
       PostLikeEntity,
       PostMentionEntity,
       CommentVoteEntity,

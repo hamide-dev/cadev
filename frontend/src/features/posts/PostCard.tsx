@@ -130,6 +130,7 @@ export function PostCard({ post, onChange, onDelete, linked = true }: { post: Po
         <div className="post-actions">
           <Link to={`/post/${post.id}`} className="action" aria-label={post.type === 'QUESTION' ? 'Voir les réponses' : 'Voir les commentaires'}>
             <Icon name="comment" size={20} />
+            {post.commentCount}
             {post.type === 'QUESTION' ? 'Répondre' : 'Commenter'}
           </Link>
           <button type="button" className="action" aria-pressed={!!post.likedByMe} onClick={toggleLike} aria-label={post.likedByMe ? "Retirer le j'aime" : "J'aime"}>

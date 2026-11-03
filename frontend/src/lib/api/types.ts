@@ -49,6 +49,7 @@ export interface Post {
   isDraft: boolean;
   isPinned: boolean;
   likeCount: number;
+  commentCount: number;
   likedByMe?: boolean;
   mentions: string[];
   attachments: Media[];

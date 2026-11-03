@@ -215,6 +215,7 @@
 .post-handle { font: 400 12px var(--mono); color: var(--text-3); }
 .post-text { font-size: 15px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
 .post-text code { font-family: var(--mono); color: var(--accent); font-size: 0.95em; }
+.comment-reply { margin-left: 32px; border-left: 2px solid var(--accent); background: rgba(183,154,255,.035); }
 .post-link { text-decoration: none; color: inherit; }
 .post-actions { display: flex; align-items: center; gap: var(--space-5); margin-left: calc(-1 * var(--space-2)); }
 .action {

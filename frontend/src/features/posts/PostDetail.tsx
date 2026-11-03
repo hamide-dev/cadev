@@ -109,7 +109,7 @@ export function PostDetail() {
           comments.data!.map((c) => {
             const replyTo = c.parentCommentId ? byId.get(c.parentCommentId)?.author : isQuestion ? p.author : null;
             return (
-              <article key={c.id} className="post">
+              <article key={c.id} className={`post comment ${c.parentCommentId ? 'comment-reply' : ''}`}>
                 <Avatar user={c.author} />
                 <div className="post-body">
                   <div>
