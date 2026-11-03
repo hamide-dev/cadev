@@ -20,14 +20,51 @@ aussi vérifié par la gateway Socket.IO.
 
 ## Organisation
 
-| Fichier | Rôle |
+Le code est rangé par fonctionnalité. Un écran vit avec ses sous-composants,
+seul ce qui sert à plusieurs fonctionnalités remonte dans `components/` ou `lib/`.
+
+```
+src/
+├── main.tsx              point d'entrée : routeur, session, styles
+├── app/                  coque de l'application
+│   ├── App.tsx           toutes les routes
+│   ├── Shell.tsx         mise en page des écrans connectés (navigation, colonnes)
+│   ├── Nav.tsx           barre du bas (mobile), rail (tablette), barre latérale (desktop)
+│   └── Aside.tsx         colonne de suggestions sur grand écran
+├── lib/                  logique sans interface
+│   ├── api/              client HTTP (client.ts), types des DTO (types.ts),
+│   │                     endpoints (endpoints.ts), envoi Cloudinary (cloudinary.ts)
+│   ├── session.tsx       jeton, utilisateur courant, déconnexion sur 401
+│   ├── socket.ts         Socket.IO /messaging et emit avec accusé de réception
+│   ├── format.ts         libellés, dates relatives, messages d'erreur
+│   └── useLoad.ts        chargement de données avec états
+├── components/           briques d'interface partagées (Icon, Avatar, TopBar,
+│                         Tabs, Sheet, RepoCard, états vide/erreur/chargement)
+├── features/             un dossier par fonctionnalité
+│   ├── auth/             accueil, connexion, inscription, mise en page en deux moitiés
+│   ├── posts/            fil, carte de publication, discussion, rédaction
+│   ├── explore/          recherche et découverte
+│   ├── notifications/
+│   ├── profile/          profil, modification, paramètres, sauvegardes
+│   ├── projects/         liste, fiche projet, tâche, fenêtres de création
+│   └── messages/         liste et conversation (deux volets sur desktop)
+└── styles/               tokens.css → base.css → components.css → layout.css
+```
+
+Règle d'import : `features/` peut utiliser `components/` et `lib/`, jamais
+l'inverse. Une fonctionnalité n'importe une autre que pour un composant
+réellement partagé (par exemple `ProjectCard` dans le profil).
+
+## Mise en page responsive
+
+| Largeur | Mise en page |
 |---|---|
-| `src/api.ts` | Client HTTP typé sur les DTO publics du back, messages d'erreur lisibles par code métier |
-| `src/socket.ts` | Connexion Socket.IO `/messaging` (JWT dans `auth.token`) et `emit` avec accusé de réception |
-| `src/auth.tsx` | Session : jeton, utilisateur courant, déconnexion sur 401 |
-| `src/ui.tsx` | Composants partagés : icônes, avatar, carte de publication, fil paginé, états vide/erreur/chargement |
-| `src/styles.css` | Tokens de la charte `Style.md` (thème sombre) et composants |
-| `src/pages/*` | Écrans : authentification, social, profil, projets, messagerie |
+| < 768 px | Une colonne, barre de navigation en bas sur les écrans principaux |
+| ≥ 768 px | Rail d'icônes à gauche |
+| ≥ 1024 px | Messagerie en deux volets, projets en grille, accueil en deux moitiés |
+| ≥ 1200 px | Barre latérale complète, colonne centrale, colonne de suggestions |
+
+Tout est dans `styles/layout.css`, écrit mobile first (`min-width` uniquement).
 
 ## Écrans
 
