@@ -1,12 +1,18 @@
 import { Link } from 'react-router-dom';
+import { CodeBlock } from './CodeBlock';
 
 // Texte d'une publication : blocs ```code```, `extraits` et @mentions mis en valeur.
 export function RichText({ text }: { text: string }) {
-  const blocks = text.split(/```[\w-]*\n?([\s\S]*?)```/g);
+  const blocks = text.split(/```([\w-]*)\n?([\s\S]*?)```/g);
   if (blocks.length === 1) return <Inline text={text} />;
   return (
     <div className="stack-s">
-      {blocks.map((block, i) => (i % 2 ? <pre key={i} className="code">{block.trimEnd()}</pre> : block.trim() && <Inline key={i} text={block.trim()} />))}
+      {blocks.map((block, i) => {
+        if (i % 3 === 0) return block.trim() && <Inline key={i} text={block.trim()} />;
+        if (i % 3 === 1) return null;
+        const language = blocks[i - 1]?.trim();
+        return <CodeBlock key={i} code={block.trimEnd()} language={language || undefined} />;
+      })}
     </div>
   );
 }

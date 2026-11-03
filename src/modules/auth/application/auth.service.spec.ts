@@ -7,7 +7,7 @@ import { createHmac } from 'node:crypto';
 import { AuthService } from './auth.service.js';
 import { UsersService } from '../../users/application/users.service.js';
 import { UserEntity } from '../../users/infrastructure/user.entity.js';
-import { BrevoEmailService } from '../infrastructure/brevo-email.service.js';
+import { SmtpEmailService } from '../infrastructure/smtp-email.service.js';
 import { EmailVerificationEntity } from '../infrastructure/email-verification.entity.js';
 import { PendingRegistrationEntity } from '../infrastructure/pending-registration.entity.js';
 
@@ -52,7 +52,7 @@ describe('AuthService', () => {
       create: vi.fn((value: object) => value),
       save: vi.fn().mockImplementation((value) => Promise.resolve(value)),
     };
-    const brevoSmtp = {
+    const smtpEmail = {
       sendVerificationCode: vi.fn().mockResolvedValue(undefined),
     };
     const testingModule = await Test.createTestingModule({
@@ -60,7 +60,7 @@ describe('AuthService', () => {
         AuthService,
         { provide: UsersService, useValue: usersService },
         { provide: JwtService, useValue: jwtService },
-        { provide: BrevoEmailService, useValue: brevoSmtp },
+        { provide: SmtpEmailService, useValue: smtpEmail },
         {
           provide: ConfigService,
           useValue: { get: vi.fn().mockReturnValue('test-secret') },
@@ -106,7 +106,7 @@ describe('AuthService', () => {
       email: 'dev@example.test',
       expiresIn: 600,
     });
-    expect(brevoSmtp.sendVerificationCode).toHaveBeenCalledWith(
+    expect(smtpEmail.sendVerificationCode).toHaveBeenCalledWith(
       'dev@example.test',
       expect.stringMatching(/^\d{4}$/),
       'registration',
@@ -125,7 +125,7 @@ describe('AuthService', () => {
         { provide: UsersService, useValue: usersService },
         { provide: JwtService, useValue: { signAsync: vi.fn() } },
         {
-          provide: BrevoEmailService,
+          provide: SmtpEmailService,
           useValue: { sendVerificationCode: vi.fn() },
         },
         {
@@ -189,7 +189,7 @@ describe('AuthService', () => {
         { provide: UsersService, useValue: usersService },
         { provide: JwtService, useValue: jwtService },
         {
-          provide: BrevoEmailService,
+          provide: SmtpEmailService,
           useValue: { sendVerificationCode: vi.fn() },
         },
         {
@@ -263,7 +263,7 @@ describe('AuthService', () => {
         { provide: UsersService, useValue: usersService },
         { provide: JwtService, useValue: jwtService },
         {
-          provide: BrevoEmailService,
+          provide: SmtpEmailService,
           useValue: { sendVerificationCode: vi.fn() },
         },
         {
@@ -312,7 +312,7 @@ describe('AuthService', () => {
     const emailVerifications = {
       upsert: vi.fn().mockResolvedValue(undefined),
     };
-    const brevoSmtp = {
+    const smtpEmail = {
       sendVerificationCode: vi.fn().mockResolvedValue(undefined),
     };
     const testingModule = await Test.createTestingModule({
@@ -320,7 +320,7 @@ describe('AuthService', () => {
         AuthService,
         { provide: UsersService, useValue: usersService },
         { provide: JwtService, useValue: { signAsync: vi.fn() } },
-        { provide: BrevoEmailService, useValue: brevoSmtp },
+        { provide: SmtpEmailService, useValue: smtpEmail },
         {
           provide: ConfigService,
           useValue: { get: vi.fn().mockReturnValue('test-secret') },
@@ -348,7 +348,7 @@ describe('AuthService', () => {
       }),
       ['userId'],
     );
-    expect(brevoSmtp.sendVerificationCode).toHaveBeenCalledWith(
+    expect(smtpEmail.sendVerificationCode).toHaveBeenCalledWith(
       user.email,
       expect.stringMatching(/^\d{4}$/),
       'login',

@@ -228,17 +228,78 @@
 .action:hover { color: var(--text); background: var(--surface); }
 .action[aria-pressed='true'] { color: var(--danger); }
 .action[aria-pressed='true'] svg { fill: currentColor; }
+.code-block {
+  overflow: hidden;
+  border: 1px solid #303238;
+  border-radius: 12px;
+  background: #17181b;
+  box-shadow: 0 12px 30px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.04);
+}
+.code-toolbar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  min-height: 42px;
+  padding: 0 12px;
+  border-bottom: 1px solid #2b2c31;
+  background: linear-gradient(#292a2e, #202125);
+  color: #a7a8ad;
+  font: 500 11px var(--mono);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.code-window-controls {
+  position: absolute;
+  left: 13px;
+  display: flex;
+  gap: 7px;
+}
+.code-window-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.18);
+}
+.code-window-dot.close { background: #ff5f57; }
+.code-window-dot.minimize { background: #febc2e; }
+.code-window-dot.maximize { background: #28c840; }
+.code-language {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #c3c4c8;
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.code-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: #bfc0c5;
+  font: inherit;
+  cursor: pointer;
+}
+.code-copy:hover { color: #fff; }
 .code {
   margin: 0;
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius);
-  background: #0e0f12;
-  border: 1px solid var(--line);
-  color: var(--success);
-  font: 400 13px/1.6 var(--mono);
+  padding: 20px;
+  color: #e4e4e7;
+  font: 400 13px/1.75 var(--mono);
   overflow-x: auto;
   white-space: pre;
+  tab-size: 2;
 }
+.code-token-comment { color: #7f8c98; }
+.code-token-string { color: #a8d58a; }
+.code-token-keyword { color: #d99cff; }
+.code-token-number { color: #8bc7ff; }
 .media-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--space-2); }
 .media-grid img, .media-grid video { width: 100%; border-radius: var(--radius); background: var(--surface); aspect-ratio: 4 / 3; object-fit: cover; }
 

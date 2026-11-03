@@ -14,6 +14,7 @@ import { MessagingModule } from './modules/messaging/messaging.module.js';
 import { MediaModule } from './modules/media/media.module.js';
 import { ProjectsModule } from './modules/projects/projects.module.js';
 import { GitHubPreviewModule } from './modules/github-preview/github-preview.module.js';
+import { NotificationsModule } from './modules/notifications/notifications.module.js';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { GitHubPreviewModule } from './modules/github-preview/github-preview.mod
     MediaModule,
     ProjectsModule,
     GitHubPreviewModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

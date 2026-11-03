@@ -34,7 +34,7 @@ Routes disponibles :
 Parcours disponibles dans cette première tranche :
 
 - `POST /api/v1/auth/register` enregistre une inscription temporaire et envoie
-  un code OTP par Brevo ; aucun compte utilisateur ni jeton n'est créé à cette
+  un code OTP par SMTP ; aucun compte utilisateur ni jeton n'est créé à cette
   étape. `POST /api/v1/auth/email/verify` crée le compte vérifié et délivre le
   JWT après validation du code ;
   `POST /api/v1/auth/email/resend` renvoie un code si nécessaire
@@ -85,10 +85,7 @@ Parcours disponibles dans cette première tranche :
 | `CLOUDINARY_CLOUD_NAME` | Optionnel | Nom du compte Cloudinary |
 | `CLOUDINARY_API_KEY` | Optionnel | Clé publique Cloudinary |
 | `CLOUDINARY_API_SECRET` | Optionnel | Secret privé Cloudinary, serveur uniquement |
-| `BREVO_API_KEY` | Optionnel | Clé API Brevo, serveur uniquement, pour l'API d'e-mails transactionnels |
-| `BREVO_SENDER_EMAIL` | Optionnel | Adresse expéditrice validée dans Brevo |
-| `BREVO_SENDER_NAME` | Optionnel | Nom expéditeur, défaut `Hello World` |
-| `SMTP_HOST`, `SMTP_FROM_EMAIL` | Optionnel | Serveur SMTP et expéditeur. S'ils sont définis, les e-mails passent par SMTP au lieu de Brevo |
+| `SMTP_HOST`, `SMTP_FROM_EMAIL` | Optionnel | Serveur SMTP et expéditeur |
 | `SMTP_PORT`, `SMTP_SECURE` | Non | Défaut `587` et `false` (Mailpit local : `1025`, `false`) |
 | `SMTP_USER`, `SMTP_PASSWORD` | Optionnel | Identifiants SMTP, requis ensemble, vides pour Mailpit |
 | `SMTP_FROM_NAME` | Optionnel | Nom expéditeur, défaut `Hello World` |
@@ -99,9 +96,8 @@ Voir [.env.example](./.env.example) pour le gabarit sans secret.
 Les trois paramètres Cloudinary peuvent rester vides pendant le développement ;
 les opérations médias répondent alors `503 MEDIA_PROVIDER_NOT_CONFIGURED`.
 Ils doivent être définis ensemble pour activer le service.
-`BREVO_API_KEY` et `BREVO_SENDER_EMAIL` sont requis ensemble pour envoyer les
-OTP via l'API Brevo ; l'adresse d'expéditeur doit être validée dans Brevo. Les
-inscriptions locales restent bloquées à l'étape de vérification tant que le
+`SMTP_HOST` et `SMTP_FROM_EMAIL` sont requis ensemble pour envoyer les OTP.
+Les inscriptions locales restent bloquées à l'étape de vérification tant que le
 service d'e-mail n'est pas configuré. Chaque fournisseur OAuth est optionnel,
 mais ses trois paramètres doivent être définis ensemble. L'OTP à 4 chiffres
 est demandé lors de l'inscription locale et peut aussi servir à la connexion
@@ -109,7 +105,7 @@ par e-mail ; la connexion par mot de passe reste disponible. Google et GitHub
 doivent retourner une adresse e-mail vérifiée.
 ### Serveur mail local (Mailpit)
 
-Pour recevoir les codes OTP sans compte Brevo, `docker-compose.yml` lance Mailpit :
+Pour recevoir les codes OTP en local, `docker-compose.yml` lance Mailpit :
 
 ```powershell
 docker compose up -d
@@ -117,9 +113,9 @@ docker compose up -d
 
 Avec `SMTP_HOST=127.0.0.1`, `SMTP_PORT=1025`, `SMTP_SECURE=false` et un
 `SMTP_FROM_EMAIL` dans `.env`, tous les e-mails envoyés par l'API arrivent dans
-la boîte de test : http://localhost:8025. Sans `SMTP_HOST`, l'API utilise Brevo.
+la boîte de test : http://localhost:8025.
 
-En local, les erreurs d'envoi Brevo sont journalisées par l'API sans inclure
+En local, les erreurs d'envoi SMTP sont journalisées par l'API sans inclure
 la clé, le code OTP ou l'adresse du destinataire. Le frontend affiche le code
 métier et écrit les détails HTTP dans la console du navigateur en mode Vite
 développement ; ces diagnostics ne sont pas activés dans un build de production.
@@ -155,7 +151,7 @@ dépôt.
 Les commentaires et réponses sous les publications passent par HTTP. Le domaine de
 messagerie (conversations, groupes et messages) passe exclusivement par
 WebSocket/Socket.IO. La messagerie directe entre deux personnes utilise une
-conversation de type `DIRECT`. L'OTP d'inscription via Brevo et la connexion
+conversation de type `DIRECT`. L'OTP d'inscription via SMTP et la connexion
 OAuth Google/GitHub sont implémentés ; les refresh tokens rotatifs,
 projets/contributions, notifications, réactions, favoris et recherche restent à
 développer. Les médias sont intégrés pour les photos de profil et les pièces

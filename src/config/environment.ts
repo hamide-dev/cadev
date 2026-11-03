@@ -8,9 +8,6 @@ export interface Environment {
   CLOUDINARY_CLOUD_NAME?: string;
   CLOUDINARY_API_KEY?: string;
   CLOUDINARY_API_SECRET?: string;
-  BREVO_API_KEY?: string;
-  BREVO_SENDER_EMAIL?: string;
-  BREVO_SENDER_NAME?: string;
   SMTP_HOST?: string;
   SMTP_PORT?: number;
   SMTP_SECURE?: boolean;
@@ -106,16 +103,6 @@ export function validateEnvironment(raw: RawEnvironment): Environment {
   if (cloudinaryCloudName && !/^[a-zA-Z0-9_-]+$/.test(cloudinaryCloudName)) {
     throw new Error('CLOUDINARY_CLOUD_NAME has an invalid format');
   }
-  const brevoApiKey = optionalString(raw, 'BREVO_API_KEY');
-  const brevoSenderEmail = optionalString(raw, 'BREVO_SENDER_EMAIL');
-  const brevoSenderName = optionalString(raw, 'BREVO_SENDER_NAME');
-  assertOptionalGroup(
-    [brevoApiKey, brevoSenderEmail],
-    'BREVO_API_KEY and BREVO_SENDER_EMAIL must be configured together',
-  );
-  if (brevoSenderEmail && !isEmailAddress(brevoSenderEmail)) {
-    throw new Error('BREVO_SENDER_EMAIL must be a valid email address');
-  }
   const smtp = validateSmtp(raw);
   const googleValues = [
     optionalString(raw, 'GOOGLE_CLIENT_ID'),
@@ -183,13 +170,6 @@ export function validateEnvironment(raw: RawEnvironment): Environment {
           CLOUDINARY_API_SECRET: cloudinaryApiSecret,
         }
       : {}),
-    ...(brevoApiKey
-      ? {
-          BREVO_API_KEY: brevoApiKey,
-          BREVO_SENDER_EMAIL: brevoSenderEmail,
-          ...(brevoSenderName ? { BREVO_SENDER_NAME: brevoSenderName } : {}),
-        }
-      : {}),
     ...smtp,
     ...(googleValues[0]
       ? {
@@ -208,8 +188,7 @@ export function validateEnvironment(raw: RawEnvironment): Environment {
   };
 }
 
-// Optional SMTP relay (e.g. the local Mailpit from docker-compose.yml). When
-// SMTP_HOST is set, verification emails go through SMTP instead of Brevo.
+// Optional SMTP relay (e.g. the local Mailpit from docker-compose.yml).
 function validateSmtp(raw: RawEnvironment): Partial<Environment> {
   const host = optionalString(raw, 'SMTP_HOST');
   const fromEmail = optionalString(raw, 'SMTP_FROM_EMAIL');

@@ -1,8 +1,11 @@
+import { useEffect, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { Avatar } from '../components/Avatar';
 import { LogoMark } from '../components/Brand';
 import { Icon } from '../components/Icon';
 import { useMe } from '../lib/session';
+import { api } from '../lib/api';
+import { emit, type Conversation } from '../lib/socket';
 
 const NAV = [
   { to: '/feed', label: 'Fil', long: 'Fil d’actualité', icon: 'home' },
@@ -16,6 +19,26 @@ const NAV = [
 // barre du bas sur mobile, rail d'icônes sur tablette, barre latérale complète sur desktop.
 export function Nav() {
   const me = useMe();
+  const [mentionCount, setMentionCount] = useState(0);
+  const [messageCount, setMessageCount] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    void api.notifications().then((items) => {
+      if (active) setMentionCount(items.filter((item) => !item.readAt && item.type === 'MENTION').length);
+    }).catch(() => {
+      if (active) setMentionCount(0);
+    });
+    void emit<Conversation[]>('conversation:list').then((items) => {
+      if (active) setMessageCount(items.length);
+    }).catch(() => {
+      if (active) setMessageCount(0);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
     <nav className="nav" aria-label="Navigation principale">
       <Link to="/feed" className="nav-brand" aria-label="Hello World, accueil">
@@ -27,6 +50,8 @@ export function Nav() {
           <Icon name={item.icon} />
           <span className="nav-short">{item.label}</span>
           <span className="nav-text">{item.long}</span>
+          {item.to === '/notifications' && mentionCount > 0 && <span className="nav-badge" aria-label={`${mentionCount} mention${mentionCount > 1 ? 's' : ''} non lue${mentionCount > 1 ? 's' : ''}`}>{mentionCount > 99 ? '99+' : mentionCount}</span>}
+          {item.to === '/messages' && messageCount > 0 && <span className="nav-badge" aria-label={`${messageCount} conversation${messageCount > 1 ? 's' : ''}`}>{messageCount > 99 ? '99+' : messageCount}</span>}
         </NavLink>
       ))}
       <Link to="/publish" className="btn btn-primary nav-publish" aria-label="Publier">

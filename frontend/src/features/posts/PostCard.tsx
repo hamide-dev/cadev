@@ -4,6 +4,7 @@ import { Avatar } from '../../components/Avatar';
 import { Icon } from '../../components/Icon';
 import { RepoCard } from '../../components/RepoCard';
 import { RichText } from './RichText';
+import { CodeBlock } from './CodeBlock';
 import { api, type Post } from '../../lib/api';
 import { errorMessage, findRepoUrl, timeAgo } from '../../lib/format';
 import { useSession } from '../../lib/session';
@@ -45,7 +46,7 @@ export function PostCard({ post, onChange, onDelete, linked = true }: { post: Po
   const body = (
     <>
       <RichText text={repo ? post.content.replace(repo, '').trim() : post.content} />
-      {post.codeSnippet && <pre className="code">{post.codeSnippet}</pre>}
+      {post.codeSnippet && <CodeBlock code={post.codeSnippet} />}
     </>
   );
 

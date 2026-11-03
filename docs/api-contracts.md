@@ -24,7 +24,7 @@ d'adresse e-mail, profils de développeur, abonnements, posts et médias,
 commentaires/réponses, votes utiles, suivi de questions et conversations directes/groupes avec messages de texte,
 code, lien ou pièce jointe. Les posts prennent en charge les brouillons, likes,
 mentions, épinglage et flux paginés. Les inscriptions locales envoient un OTP
-à 4 chiffres via Brevo ; OAuth Google/GitHub accepte uniquement des adresses
+à 4 chiffres via SMTP ; OAuth Google/GitHub accepte uniquement des adresses
 vérifiées par le fournisseur.
 
 Non encore livrés : refresh tokens rotatifs et révocables,
@@ -105,7 +105,7 @@ depuis un champ `userId` fourni par le client.
 | `GET /users/:username`, `GET/PATCH /users/me` | Lecture publique / authentifié | profil public / champs modifiables → profil public | Disponible ; profil développeur avec handle, spécialité, niveau, intérêts, technologies et URL GitHub ; champs sensibles exclus. |
 | `PUT/DELETE /users/:username/follow` | Authentifié | handle → état d'abonnement | Disponible ; pas d'auto-abonnement ; idempotent. |
 | `GET /posts`, `GET /posts/users/:username` | Public | curseur opaque, limite → `{ items, nextCursor, hasMore }` | Disponible ; ordre chronologique stable `(createdAt, id)`, brouillons exclus. |
-| `GET /posts/feed/following`, `GET /posts/feed/for-you` | Authentifié | curseur opaque, limite → page | Disponible ; flux chronologique des abonnements et sélection taguée par intérêts/technologies. |
+| `GET /posts/feed/following`, `GET /posts/feed/for-you` | Authentifié | curseur opaque, limite → page | Disponible ; flux chronologique des abonnements et toutes les publications publiques de la communauté, sans filtre de catégorie. |
 | `POST /posts`, `POST /posts/drafts`, `GET /posts/drafts/me`, `POST /posts/:postId/publish` | Authentifié | DTO publication → post/page | Disponible ; brouillons privés à leur auteur ; contenu requis avant publication. |
 | `GET /posts/:postId`, `PATCH /posts/:postId`, `DELETE /posts/:postId` | Auth. selon opération | DTO de publication → DTO public | Disponible ; auteur/propriétaire vérifié ; type `PostType`. |
 | `PUT/DELETE /posts/:postId/like`, `PUT/DELETE /posts/:postId/pin` | Authentifié | aucun corps → état | Disponible ; likes idempotents ; un post épinglé par auteur. |

@@ -33,9 +33,8 @@ de la messagerie.
    persistants.
 4. **Les contrats publics sont des DTO construits par liste blanche.** Aucune
    entité TypeORM n'est renvoyée directement.
-5. **Le fil “Abonnements” est chronologique.** Le fil “Pour vous” commence par
-   une sélection explicable fondée sur les intérêts et compétences, sans
-   prétendre être un moteur de recommandation avancé.
+5. **Le fil “Abonnements” est chronologique.** Le fil “Pour vous” affiche toutes
+   les publications publiques de la communauté, quelle que soit leur catégorie.
 6. **Les groupes de messagerie sont privés.** Un membre ne peut lire ou écrire
    que dans une conversation dont il est membre. Les salons de projet sont
    soumis en plus aux droits du projet.
@@ -246,7 +245,7 @@ règles :
    de suppression de compte.
 4. Exigences de visibilité des profils (public, abonnés, privé) et éventuelle
    possibilité de rendre une publication non publique.
-5. Filtres et ordre exacts du fil « Pour vous » pour la première version.
+5. Règles d'ordre supplémentaires du fil « Pour vous » pour une future version.
 
 Les secrets et URL de production ne doivent pas être inventés ni committés ;
 ils seront fournis via une configuration d'environnement validée au démarrage.

@@ -14,6 +14,8 @@ import { ResendVerificationDto } from './dto/resend-verification.dto.js';
 import { RequestLoginCodeDto } from './dto/request-login-code.dto.js';
 import { VerifyEmailDto } from './dto/verify-email.dto.js';
 import { VerifyLoginCodeDto } from './dto/verify-login-code.dto.js';
+import { RequestPasswordResetDto } from './dto/request-password-reset.dto.js';
+import { ResetPasswordDto } from './dto/reset-password.dto.js';
 import {
   OAuthConfigurationGuard,
   OAuthProvider,
@@ -72,6 +74,20 @@ export class AuthController {
   @ApiOperation({ summary: 'Sign in with email and password' })
   login(@Body() input: LoginDto): Promise<AuthResponse> {
     return this.authService.login(input);
+  }
+
+  @Post('password/forgot')
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Request a password reset code' })
+  requestPasswordReset(@Body() input: RequestPasswordResetDto) {
+    return this.authService.requestPasswordReset(input);
+  }
+
+  @Post('password/reset')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Reset a password with an emailed code' })
+  resetPassword(@Body() input: ResetPasswordDto) {
+    return this.authService.resetPassword(input);
   }
 
   @Get('google')

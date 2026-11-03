@@ -136,7 +136,7 @@ export class PostsController {
   @Get('feed/for-you')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get a feed filtered by profile interests' })
+  @ApiOperation({ summary: 'Get all public posts from the community' })
   forYouFeed(
     @CurrentUser() user: AuthUser,
     @Query() query: FeedQueryDto,

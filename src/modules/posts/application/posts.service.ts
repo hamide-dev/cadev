@@ -106,27 +106,9 @@ export class PostsService {
     cursor?: string,
     limit = 20,
   ): Promise<PostPage> {
-    const profile = await this.users.findOne({
-      where: { id: userId },
-      select: { id: true, interests: true, technologies: true },
-    });
-    if (!profile) {
-      throw new NotFoundException({
-        code: 'USER_NOT_FOUND',
-        message: 'User not found.',
-      });
-    }
-    const preferences = normalizeTags([
-      ...profile.interests,
-      ...profile.technologies,
-    ]);
-    const query = this.publicQuery();
-    if (preferences.length > 0) {
-      query.andWhere('post.tags && CAST(:preferences AS varchar[])', {
-        preferences,
-      });
-    }
-    return this.fetchPage(query, cursor, limit, userId);
+    // Les catégories peuvent guider la découverte, mais ne masquent jamais une
+    // publication publique d'une autre catégorie.
+    return this.fetchPage(this.publicQuery(), cursor, limit, userId);
   }
 
   async listDrafts(

@@ -7,7 +7,7 @@ import {
 } from 'typeorm';
 import { UserEntity } from '../../users/infrastructure/user.entity.js';
 
-export type EmailVerificationPurpose = 'registration' | 'login';
+export type EmailVerificationPurpose = 'registration' | 'login' | 'password-reset';
 
 @Entity('email_verifications')
 export class EmailVerificationEntity {

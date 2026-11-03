@@ -8,7 +8,6 @@ import * as nodemailer from 'nodemailer';
 import type { Environment } from '../../../config/environment.js';
 import type { EmailVerificationPurpose } from './email-verification.entity.js';
 
-// Used instead of Brevo when SMTP_HOST is set, e.g. the local Mailpit
 // started by docker-compose.yml (SMTP on 1025, inbox on http://localhost:8025).
 @Injectable()
 export class SmtpEmailService {
@@ -21,9 +20,16 @@ export class SmtpEmailService {
     code: string,
     purpose: EmailVerificationPurpose = 'registration',
   ): Promise<void> {
+    const host = this.config.get('SMTP_HOST');
+    if (!host) {
+      throw new ServiceUnavailableException({
+        code: 'EMAIL_PROVIDER_NOT_CONFIGURED',
+        message: 'SMTP_HOST must be configured before sending email.',
+      });
+    }
     const user = this.config.get('SMTP_USER');
     const transport = nodemailer.createTransport({
-      host: this.config.get('SMTP_HOST'),
+      host,
       port: this.config.get('SMTP_PORT'),
       secure: this.config.get('SMTP_SECURE') ?? false,
       connectionTimeout: 5000,

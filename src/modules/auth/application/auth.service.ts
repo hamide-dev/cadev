@@ -14,13 +14,15 @@ import { LessThan, Repository } from 'typeorm';
 import type { Environment } from '../../../config/environment.js';
 import { UsersService } from '../../users/application/users.service.js';
 import { EmailVerificationEntity } from '../infrastructure/email-verification.entity.js';
-import { BrevoEmailService } from '../infrastructure/brevo-email.service.js';
+import { SmtpEmailService } from '../infrastructure/smtp-email.service.js';
 import type { PublicUser } from '../../users/domain/user.types.js';
 import type { RegisterDto } from '../presentation/dto/register.dto.js';
 import type { LoginDto } from '../presentation/dto/login.dto.js';
 import type { RequestLoginCodeDto } from '../presentation/dto/request-login-code.dto.js';
 import type { VerifyEmailDto } from '../presentation/dto/verify-email.dto.js';
 import type { VerifyLoginCodeDto } from '../presentation/dto/verify-login-code.dto.js';
+import type { RequestPasswordResetDto } from '../presentation/dto/request-password-reset.dto.js';
+import type { ResetPasswordDto } from '../presentation/dto/reset-password.dto.js';
 import type { OAuthIdentity } from '../domain/oauth-identity.js';
 import type { EmailVerificationPurpose } from '../infrastructure/email-verification.entity.js';
 import { PendingRegistrationEntity } from '../infrastructure/pending-registration.entity.js';
@@ -55,7 +57,7 @@ export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
-    private readonly brevoEmail: BrevoEmailService,
+    private readonly smtpEmail: SmtpEmailService,
     private readonly config: ConfigService<Environment, true>,
     @InjectRepository(EmailVerificationEntity)
     private readonly emailVerifications: Repository<EmailVerificationEntity>,
@@ -270,6 +272,67 @@ export class AuthService {
     );
   }
 
+  async requestPasswordReset(
+    input: RequestPasswordResetDto,
+  ): Promise<RegistrationResponse> {
+    const email = input.email.trim().toLowerCase();
+    const user = await this.usersService.findByEmail(email);
+    if (user?.emailVerified) {
+      await this.sendVerificationCode(user.id, user.email, 'password-reset');
+    }
+    return {
+      message: 'If this verified account exists, a password reset code has been sent.',
+      email,
+      expiresIn: VERIFICATION_TTL_MS / 1000,
+    };
+  }
+
+  async resetPassword(input: ResetPasswordDto): Promise<{ message: string }> {
+    assertBcryptPasswordLength(input.password);
+    const user = await this.usersService.findByEmail(
+      input.email.trim().toLowerCase(),
+    );
+    if (!user?.emailVerified) throw invalidVerificationCode();
+    const verification = await this.emailVerifications.findOneBy({
+      userId: user.id,
+      purpose: 'password-reset',
+    });
+    if (!verification || verification.expiresAt.getTime() <= Date.now()) {
+      if (verification) await this.emailVerifications.delete({ id: verification.id });
+      throw invalidVerificationCode();
+    }
+    const attempts = await this.emailVerifications.increment(
+      { id: verification.id, attempts: LessThan(MAX_VERIFICATION_ATTEMPTS) },
+      'attempts',
+      1,
+    );
+    if (!attempts.affected) {
+      throw new ForbiddenException({
+        code: 'VERIFICATION_ATTEMPTS_EXCEEDED',
+        message: 'Request a new password reset code and try again.',
+      });
+    }
+    const expectedHash = this.hashVerificationCode(
+      user.id,
+      input.code,
+      'password-reset',
+    );
+    const storedHash = Buffer.from(verification.codeHash, 'hex');
+    const submittedHash = Buffer.from(expectedHash, 'hex');
+    if (
+      storedHash.length !== submittedHash.length ||
+      !timingSafeEqual(storedHash, submittedHash)
+    ) {
+      throw invalidVerificationCode();
+    }
+    await this.usersService.updatePassword(
+      user.id,
+      await bcrypt.hash(input.password, 12),
+    );
+    await this.emailVerifications.delete({ id: verification.id });
+    return { message: 'Password reset successfully.' };
+  }
+
   async loginWithOAuth(identity: OAuthIdentity): Promise<AuthResponse> {
     const existing = await this.usersService.findByOAuthIdentity(
       identity.provider,
@@ -304,7 +367,7 @@ export class AuthService {
       },
       ['userId'],
     );
-    await this.brevoEmail.sendVerificationCode(email, code, purpose);
+    await this.smtpEmail.sendVerificationCode(email, code, purpose);
   }
 
   private async sendPendingRegistrationCode(
@@ -319,7 +382,7 @@ export class AuthService {
     pending.attempts = 0;
     pending.expiresAt = new Date(Date.now() + VERIFICATION_TTL_MS);
     await this.pendingRegistrations.save(pending);
-    await this.brevoEmail.sendVerificationCode(
+    await this.smtpEmail.sendVerificationCode(
       pending.email,
       code,
       'registration',

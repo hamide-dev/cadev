@@ -69,6 +69,10 @@ export class UsersService {
     return this.users.findOneBy({ email });
   }
 
+  async updatePassword(id: string, passwordHash: string): Promise<void> {
+    await this.users.update({ id }, { passwordHash });
+  }
+
   async findByUsername(username: string): Promise<UserEntity | null> {
     return this.users.findOneBy({ username });
   }
