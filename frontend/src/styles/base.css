@@ -1,6 +1,7 @@
 /* Remise à zéro, accessibilité et utilitaires. */
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; }
+html { scroll-padding-bottom: 120px; } /* le focus ne passe pas sous la barre d’action collée en bas */
 body {
   background: var(--bg);
   color: var(--text);
