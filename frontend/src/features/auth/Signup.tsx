@@ -200,7 +200,7 @@ export function Signup() {
 
         {step === 3 && (
           <div className="stack">
-            <fieldset className="field" style={{ border: 0, padding: 0, margin: 0 }}>
+            <fieldset className="field">
               <legend className="label" style={{ marginBottom: 8 }}>Votre spécialité</legend>
               <div className="choices">
                 {(Object.keys(SPECIALTIES) as Specialty[]).map((key) => (
@@ -211,7 +211,7 @@ export function Signup() {
               </div>
               {fieldError('specialty')}
             </fieldset>
-            <fieldset className="field" style={{ border: 0, padding: 0, margin: 0 }}>
+            <fieldset className="field">
               <legend className="label" style={{ marginBottom: 8 }}>Votre niveau</legend>
               <div className="choices two">
                 {(Object.keys(LEVELS) as Level[]).map((key) => (

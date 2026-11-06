@@ -96,7 +96,7 @@ export function EditProfile() {
             <label htmlFor="ep-github">Profil GitHub</label>
             <input id="ep-github" className="input" inputMode="url" placeholder="github.com/ton-pseudo" value={form.github} onChange={(e) => set('github', e.target.value)} />
           </div>
-          <fieldset className="field" style={{ border: 0, padding: 0, margin: 0 }}>
+          <fieldset className="field">
             <legend className="label" style={{ marginBottom: 8 }}>Spécialité</legend>
             <div className="choices">
               {(Object.keys(SPECIALTIES) as Specialty[]).map((key) => (
@@ -106,7 +106,7 @@ export function EditProfile() {
               ))}
             </div>
           </fieldset>
-          <fieldset className="field" style={{ border: 0, padding: 0, margin: 0 }}>
+          <fieldset className="field">
             <legend className="label" style={{ marginBottom: 8 }}>Niveau</legend>
             <div className="choices two">
               {(Object.keys(LEVELS) as Level[]).map((key) => (
@@ -116,7 +116,7 @@ export function EditProfile() {
               ))}
             </div>
           </fieldset>
-          <fieldset className="field" style={{ border: 0, padding: 0, margin: 0 }}>
+          <fieldset className="field">
             <legend className="label" style={{ marginBottom: 8 }}>Centres d’intérêt</legend>
             <div className="choices two">
               {[...new Set([...INTERESTS, ...form.interests])].map((topic) => {

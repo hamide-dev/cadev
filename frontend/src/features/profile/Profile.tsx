@@ -100,7 +100,7 @@ export function Profile() {
         )}
       </div>
       <div className="pad stack" style={{ marginTop: -48, position: 'relative' }}>
-        <div className="row-between" style={{ alignItems: 'flex-end' }}>
+        <div className="row-between wrap" style={{ alignItems: 'flex-end' }}>
           <Avatar user={user} size="xl" link={false} />
           <div className="row">
             <button type="button" className="icon-btn bordered" aria-label="Partager le profil" onClick={share}>

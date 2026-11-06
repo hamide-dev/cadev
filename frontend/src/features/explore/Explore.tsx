@@ -67,7 +67,7 @@ export function Explore() {
           <span style={{ position: 'absolute', left: 14, color: 'var(--text-3)' }}>
             <Icon name="search" size={22} />
           </span>
-          <input className="input" type="search" style={{ paddingLeft: 46 }} placeholder="Personnes, questions, projets" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <input className="input" type="search" style={{ paddingLeft: 46 }} placeholder="Rechercher" value={query} onChange={(e) => setQuery(e.target.value)} />
         </label>
         {q && <p className="xs muted" style={{ marginTop: 8 }}>Recherche parmi les contenus récents.</p>}
       </div>

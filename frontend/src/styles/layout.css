@@ -127,7 +127,7 @@
     border: 1px solid var(--border); border-radius: 20px; background: var(--bg);
     padding-bottom: var(--space-4);
   }
-  .auth-main .footer-cta { position: static; background: none; }
+  .auth-main .footer-cta { position: static; background: none; border-top: 0; }
   .auth-main .brand { display: none; } /* déjà dans le panneau de gauche */
 }
 
