@@ -1,5 +1,6 @@
 ﻿export const API_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 export const BASE = `${API_URL}/api/v1`;
+export const FRONTEND_API_KEY = (import.meta.env.VITE_API_KEY as string | undefined) ?? 'b4f7b88eff2a716ce8c2b0f045c38a37c00cc6959a2df30f970f9c5a2e487d9b';
 const TOKEN_KEY = 'hw.token';
 
 export class ApiError extends Error {
@@ -16,6 +17,7 @@ export class ApiError extends Error {
 const MESSAGES: Record<string, string> = {
   API_KEY_INVALID: "La clé d'application du frontend ne correspond pas à celle du serveur.",
   INVALID_CREDENTIALS: 'E-mail ou mot de passe incorrect.',
+  ACCOUNT_TEMPORARILY_LOCKED: 'Compte temporairement bloqué pendant 2 minutes suite à 5 tentatives infructueuses.',
   INVALID_VERIFICATION_CODE: 'Ce code ne correspond pas ou a expiré. Vérifie-le ou demande-en un nouveau.',
   VERIFICATION_ATTEMPTS_EXCEEDED: 'Trop de tentatives. Demande un nouveau code.',
   EMAIL_ALREADY_VERIFIED: 'Cette adresse est déjà vérifiée, tu peux te connecter.',
@@ -83,6 +85,7 @@ export async function request<T>(method: string, path: string, body?: unknown): 
       method,
       cache: 'no-store',
       headers: {
+        'x-api-key': FRONTEND_API_KEY,
         ...(import.meta.env.VITE_API_KEY
           ? { 'x-api-key': import.meta.env.VITE_API_KEY }
           : {}),
@@ -106,10 +109,11 @@ export async function request<T>(method: string, path: string, body?: unknown): 
       });
     }
     if (response.status === 401 && token) onUnauthorized();
+    const serverMsg = typeof data?.message === 'string' && data.message.length > 0 ? data.message : null;
     throw new ApiError(
       response.status,
       code,
-      MESSAGES[code] ?? BY_STATUS[response.status] ?? 'Une erreur est survenue. Réessaie dans un instant.',
+      serverMsg ?? MESSAGES[code] ?? BY_STATUS[response.status] ?? 'Une erreur est survenue. Réessaie dans un instant.',
     );
   }
   return data as T;

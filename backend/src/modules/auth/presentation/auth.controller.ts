@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Req, Res, UseGuards } from '@nestjs/common';
+﻿import { Body, Controller, Get, Param, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
@@ -110,7 +110,7 @@ export class AuthController {
   }
 
   @Post('login')
-  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Throttle({ default: { limit: 15, ttl: 60_000 } })
   @ApiOperation({ summary: 'Sign in with email and password' })
   login(@Body() input: LoginDto): Promise<AuthResponse> {
     return this.authService.login(input);

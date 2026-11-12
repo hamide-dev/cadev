@@ -1,4 +1,4 @@
-import {
+﻿import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
@@ -50,6 +50,14 @@ export interface EmailVerifiedResponse {
 
 const VERIFICATION_TTL_MS = 4 * 60 * 1000;
 const MAX_VERIFICATION_ATTEMPTS = 5;
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOGIN_LOCKOUT_MS = 2 * 60 * 1000; // 2 minutes
+
+interface LoginAttemptTracker {
+  failedAttempts: number;
+  lockedUntil: number | null;
+  lastAttemptAt: number;
+}
 
 function assertBcryptPasswordLength(password: string): void {
   if (Buffer.byteLength(password, 'utf8') > 72) {
@@ -72,6 +80,8 @@ export class AuthService {
     @InjectRepository(PendingRegistrationEntity)
     private readonly pendingRegistrations: Repository<PendingRegistrationEntity>,
   ) {}
+
+  private readonly loginAttempts = new Map<string, LoginAttemptTracker>();
 
   // ---------------------------------------------------------------------------
   // Nouveau flux en deux phases
@@ -398,24 +408,84 @@ export class AuthService {
 
   async login(input: LoginDto): Promise<AuthResponse> {
     assertBcryptPasswordLength(input.password);
-    const user = await this.usersService.findByEmailForAuthentication(
-      input.email.trim().toLowerCase(),
-    );
+    const email = input.email.trim().toLowerCase();
+    const now = Date.now();
+
+    // Nettoyage périodique si la Map grossit
+    if (this.loginAttempts.size > 1000) {
+      for (const [key, val] of this.loginAttempts.entries()) {
+        if (now - val.lastAttemptAt > 30 * 60 * 1000) {
+          this.loginAttempts.delete(key);
+        }
+      }
+    }
+
+    // Vérifie si le compte est actuellement verrouillé pour cet e-mail
+    const attempt = this.loginAttempts.get(email);
+    if (attempt?.lockedUntil && attempt.lockedUntil > now) {
+      const remainingSeconds = Math.ceil((attempt.lockedUntil - now) / 1000);
+      const remainingMinutes = Math.ceil(remainingSeconds / 60);
+      const durationMsg =
+        remainingSeconds > 60
+          ? ${remainingMinutes} minute
+          : ${remainingSeconds} seconde;
+      throw new ForbiddenException({
+        code: 'ACCOUNT_TEMPORARILY_LOCKED',
+        message: Compte temporairement bloqué suite à 5 tentatives infructueuses. Réessayez dans .,
+        remainingSeconds,
+      });
+    }
+
+    const user = await this.usersService.findByEmailForAuthentication(email);
     const validPassword = user?.passwordHash
       ? await bcrypt.compare(input.password, user.passwordHash)
       : await bcrypt.hash(input.password, 12).then(() => false);
+
     if (!user || !validPassword) {
+      const current = this.loginAttempts.get(email) ?? {
+        failedAttempts: 0,
+        lockedUntil: null,
+        lastAttemptAt: now,
+      };
+
+      // Si le verrou précédent a expiré, on repart de 0
+      if (current.lockedUntil && current.lockedUntil <= now) {
+        current.failedAttempts = 0;
+        current.lockedUntil = null;
+      }
+
+      current.failedAttempts += 1;
+      current.lastAttemptAt = now;
+
+      // 5 tentatives atteintes -> verrouille pendant 2 minutes (120 secondes)
+      if (current.failedAttempts >= MAX_LOGIN_ATTEMPTS) {
+        current.lockedUntil = now + LOGIN_LOCKOUT_MS;
+        current.failedAttempts = 0;
+        this.loginAttempts.set(email, current);
+        throw new ForbiddenException({
+          code: 'ACCOUNT_TEMPORARILY_LOCKED',
+          message: 'Mot de passe incorrect. Vous avez échoué 5 tentatives : votre compte est bloqué pendant 2 minutes.',
+          remainingSeconds: 120,
+        });
+      }
+
+      this.loginAttempts.set(email, current);
+      const remaining = MAX_LOGIN_ATTEMPTS - current.failedAttempts;
       throw new UnauthorizedException({
         code: 'INVALID_CREDENTIALS',
-        message: 'Email or password is incorrect.',
+        message: E-mail ou mot de passe incorrect. Plus que  tentative avant blocage pendant 2 minutes.,
       });
     }
+
     if (!user.emailVerified) {
       throw new ForbiddenException({
         code: 'EMAIL_VERIFICATION_REQUIRED',
         message: 'Verify your email address before signing in.',
       });
     }
+
+    // Mot de passe correct : réinitialise le compteur d'échecs
+    this.loginAttempts.delete(email);
 
     return this.issueToken(
       user.id,

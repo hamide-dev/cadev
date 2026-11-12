@@ -1,5 +1,5 @@
-import { io, type Socket } from 'socket.io-client';
-import { API_URL, getToken, type Author } from './api';
+﻿import { io, type Socket } from 'socket.io-client';
+import { API_URL, FRONTEND_API_KEY, getToken, type Author } from './api';
 
 // Contrat Socket.IO du namespace /messaging (docs/api-contracts.md du back).
 export interface Conversation {
@@ -25,7 +25,8 @@ let socket: Socket | null = null;
 export function getSocket(): Socket {
   if (!socket) {
     socket = io(`${API_URL}/messaging`, {
-      auth: { token: getToken(), apiKey: import.meta.env.VITE_API_KEY },
+      auth: { token: getToken(), apiKey: FRONTEND_API_KEY },
+      extraHeaders: { 'x-api-key': FRONTEND_API_KEY },
       transports: ['websocket'],
     });
   }
