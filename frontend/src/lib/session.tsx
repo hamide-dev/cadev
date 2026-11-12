@@ -1,5 +1,5 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { api, ApiError, getToken, setToken, setUnauthorizedHandler, type AuthResponse, type User } from './api';
+﻿import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { api, ApiError, clearLegacyToken, setUnauthorizedHandler, type AuthResponse, type User } from './api';
 import { disconnectSocket } from './socket';
 
 interface Session {
@@ -28,7 +28,7 @@ function setStoredUser(user: User | null): void {
     if (user) localStorage.setItem(USER_KEY, JSON.stringify(user));
     else localStorage.removeItem(USER_KEY);
   } catch {
-    // Le token reste la source d'authentification si le stockage est indisponible.
+    // Le stockage peut être indisponible.
   }
 }
 
@@ -36,21 +36,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [user, setUserState] = useState<User | null>(() => getStoredUser());
   const [ready, setReady] = useState(false);
 
-  const signOut = useCallback(() => {
-    setToken(null);
+  const signOut = useCallback(async () => {
+    try {
+      await api.logout();
+    } catch {
+      // Ignorer si déjà déconnecté
+    }
     setStoredUser(null);
     disconnectSocket();
     setUserState(null);
   }, []);
 
   useEffect(() => {
+    clearLegacyToken();
     setUnauthorizedHandler(signOut);
-    if (!getToken()) {
-      setStoredUser(null);
-      setUserState(null);
-      setReady(true);
-      return;
-    }
     let cancelled = false;
     const restore = async () => {
       try {
@@ -60,8 +59,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           setStoredUser(currentUser);
         }
       } catch (error) {
-        if (error instanceof ApiError && error.status === 401) {
-          setToken(null);
+        if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
           setStoredUser(null);
           setUserState(null);
         }
@@ -75,22 +73,25 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     };
   }, [signOut]);
 
+  const signIn = useCallback((auth: AuthResponse) => {
+    setStoredUser(auth.user);
+    setUserState(auth.user);
+  }, []);
+
+  const updateUser = useCallback((nextUser: User) => {
+    setStoredUser(nextUser);
+    setUserState(nextUser);
+  }, []);
+
   const value = useMemo<Session>(
     () => ({
       user,
       ready,
-      signIn: (auth) => {
-        setToken(auth.accessToken);
-        setStoredUser(auth.user);
-        setUserState(auth.user);
-      },
-      setUser: (nextUser) => {
-        setStoredUser(nextUser);
-        setUserState(nextUser);
-      },
+      signIn,
+      setUser: updateUser,
       signOut,
     }),
-    [user, ready, signOut],
+    [user, ready, signIn, updateUser, signOut],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

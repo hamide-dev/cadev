@@ -262,13 +262,13 @@ export class AuthService {
     const email = input.email.trim().toLowerCase();
     const pending = await this.pendingRegistrations.findOneBy({ email });
     if (pending) {
-      // Nouveau flux : OTP de pré-inscription (étape 1, e-mail pas encore vérifié)
-      if (!pending.emailVerified) {
-        return this.verifyInitOtp(email, input.code);
-      }
       // Ancien flux : pré-inscription complète (username + password déjà renseignés)
       if (pending.username && pending.passwordHash) {
         return this.verifyPendingRegistration(pending, input.code);
+      }
+      // Nouveau flux : OTP de pré-inscription (étape 1, e-mail pas encore vérifié)
+      if (!pending.emailVerified) {
+        return this.verifyInitOtp(email, input.code);
       }
       throw invalidVerificationCode();
     }
@@ -427,11 +427,14 @@ export class AuthService {
       const remainingMinutes = Math.ceil(remainingSeconds / 60);
       const durationMsg =
         remainingSeconds > 60
-          ? ${remainingMinutes} minute
-          : ${remainingSeconds} seconde;
+          ? remainingMinutes + ' minute' + (remainingMinutes > 1 ? 's' : '')
+          : remainingSeconds + ' seconde' + (remainingSeconds > 1 ? 's' : '');
       throw new ForbiddenException({
         code: 'ACCOUNT_TEMPORARILY_LOCKED',
-        message: Compte temporairement bloqué suite à 5 tentatives infructueuses. Réessayez dans .,
+        message:
+          'Compte temporairement bloqué suite à 5 tentatives infructueuses. Réessayez dans ' +
+          durationMsg +
+          '.',
         remainingSeconds,
       });
     }
@@ -473,7 +476,12 @@ export class AuthService {
       const remaining = MAX_LOGIN_ATTEMPTS - current.failedAttempts;
       throw new UnauthorizedException({
         code: 'INVALID_CREDENTIALS',
-        message: E-mail ou mot de passe incorrect. Plus que  tentative avant blocage pendant 2 minutes.,
+        message:
+          'E-mail ou mot de passe incorrect. Plus que ' +
+          remaining +
+          ' tentative' +
+          (remaining > 1 ? 's' : '') +
+          ' avant blocage pendant 2 minutes.',
       });
     }
 

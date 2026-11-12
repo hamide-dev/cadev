@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module.js';
 import type { Environment } from './config/environment.js';
 
@@ -12,6 +13,8 @@ async function bootstrap() {
   if (trustProxyHops) {
     app.getHttpAdapter().getInstance().set('trust proxy', trustProxyHops);
   }
+
+  app.use(cookieParser());
 
   app.setGlobalPrefix('api/v1');
   app.useGlobalPipes(
@@ -27,6 +30,7 @@ async function bootstrap() {
       .get('CORS_ORIGINS', { infer: true })
       .split(',')
       .map((origin) => origin.trim()),
+    credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key'],
   });
 

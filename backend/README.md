@@ -36,16 +36,18 @@ Routes disponibles :
 
 Parcours disponibles dans cette première tranche :
 
-- `POST /api/v1/auth/register` enregistre une inscription temporaire et envoie
-  un code OTP par SMTP ; aucun compte utilisateur ni jeton n'est créé à cette
-  étape. `POST /api/v1/auth/email/verify` crée le compte vérifié et délivre le
-  JWT après validation du code ;
+- `POST /api/v1/auth/register/init`, puis
+  `POST /api/v1/auth/email/verify` et `POST /api/v1/auth/register/complete`
+  vérifient l'adresse avant de créer le compte et délivrer la session via un
+  cookie HttpOnly. Le flux historique `POST /api/v1/auth/register` reste
+  disponible et crée le compte après validation du code ;
   `POST /api/v1/auth/email/resend` renvoie un code si nécessaire
-- `POST /api/v1/auth/login` pour les comptes e-mail/mot de passe vérifiés
+- `POST /api/v1/auth/login` pour les comptes e-mail/mot de passe vérifiés ; la
+  session est conservée dans un cookie HttpOnly, pas dans le JSON
 - `POST /api/v1/auth/login/code` puis `POST /api/v1/auth/login/verify` pour
   demander et valider un code OTP de connexion à 4 chiffres
 - `GET /api/v1/auth/google` et `/api/v1/auth/github` pour OAuth ; les callbacks
-  renvoient le résultat d'authentification JSON
+  définissent le cookie de session HttpOnly puis redirigent vers le frontend
 - `GET /api/v1/users?search=...&page=...&limit=...` pour rechercher et parcourir les utilisateurs par pages
 - `GET /api/v1/users/:username`, `GET/PATCH /api/v1/users/me`
 - `PUT/DELETE /api/v1/users/:username/follow` pour suivre/ne plus suivre un

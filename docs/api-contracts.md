@@ -100,16 +100,21 @@ Les routes décrites ci-dessous sont préfixées par `/api/v1` et soumises à va
 `forbidNonWhitelisted`, transformation sans conversion implicite) et aux guards
 requis. Les opérations authentifiées reçoivent l'identité depuis le JWT, jamais
 depuis un champ `userId` fourni par le client.
+Les sessions sont déposées dans le cookie `access_token` HttpOnly ; les appels
+navigateur doivent inclure les cookies (`credentials: include`). Le JWT n'est
+pas renvoyé dans les réponses JSON.
 
 | Méthode et chemin | Auth. | Entrée / sortie principale | Règles notables |
 |---|---|---|---|
-| `POST /auth/register` | Non | `email`, `username`, `displayName`, `password` → statut d'envoi OTP | Disponible ; conserve uniquement une inscription en attente, aucun compte utilisateur ni token avant vérification ; code à 4 chiffres valable 4 min, 5 tentatives maximum. |
-| `POST /auth/email/verify` | Non | `email`, `code` → access JWT + utilisateur public | Disponible ; crée le compte avec l'adresse vérifiée uniquement après validation du code et consomme l'inscription en attente. |
+| `POST /auth/register/init` | Non | `email`, `displayName` → statut d'envoi OTP | Disponible ; ouvre le nouveau flux d'inscription, sans créer de compte ni délivrer de session. |
+| `POST /auth/email/verify` | Non | `email`, `code` → confirmation de vérification ou utilisateur public et cookie HttpOnly | Disponible ; le nouveau flux vérifie l'adresse avant la finalisation ; le flux historique crée le compte après validation du code. |
+| `POST /auth/register/complete` | Non | `email`, `username`, `password` → utilisateur public et cookie de session HttpOnly | Disponible ; finalise le nouveau flux après vérification de l'adresse. |
+| `POST /auth/register` | Non | `email`, `username`, `displayName`, `password` → statut d'envoi OTP | Disponible ; flux historique, conserve une inscription en attente jusqu'à vérification ; code à 4 chiffres valable 4 min, 5 tentatives maximum. |
 | `POST /auth/email/resend` | Non | `email` → statut générique d'envoi | Disponible ; limite de débit, ne révèle pas si un compte existe. |
-| `POST /auth/login` | Non | e-mail + mot de passe → access JWT + utilisateur public | Disponible ; réservé aux comptes vérifiés ; limitation de débit. |
-| `POST /auth/login/code`, `POST /auth/login/verify` | Non | e-mail puis code à 4 chiffres → access JWT + utilisateur public | Disponible ; OTP valable 4 min, à usage unique ; réponse d'envoi générique. |
-| `GET /auth/google`, `GET /auth/google/callback` | OAuth | Redirection fournisseur puis access JWT + utilisateur public JSON | Disponible si les identifiants OAuth sont configurés ; e-mail Google vérifié requis. |
-| `GET /auth/github`, `GET /auth/github/callback` | OAuth | Redirection fournisseur puis access JWT + utilisateur public JSON | Disponible si les identifiants OAuth sont configurés ; e-mail principal GitHub vérifié requis. |
+| `POST /auth/login` | Non | e-mail + mot de passe → utilisateur public et cookie de session HttpOnly | Disponible ; réservé aux comptes vérifiés ; limitation de débit. |
+| `POST /auth/login/code`, `POST /auth/login/verify` | Non | e-mail puis code à 4 chiffres → utilisateur public et cookie de session HttpOnly | Disponible ; OTP valable 4 min, à usage unique ; réponse d'envoi générique. |
+| `GET /auth/google`, `GET /auth/google/callback` | OAuth | Redirection fournisseur puis redirection frontend avec cookie de session HttpOnly | Disponible si les identifiants OAuth sont configurés ; e-mail Google vérifié requis. |
+| `GET /auth/github`, `GET /auth/github/callback` | OAuth | Redirection fournisseur puis redirection frontend avec cookie de session HttpOnly | Disponible si les identifiants OAuth sont configurés ; e-mail principal GitHub vérifié requis. |
 | `POST /auth/refresh`, `POST /auth/logout` | Session | refresh/révocation → résultat | Prévu, non disponible. |
 | `GET /users/:username`, `GET/PATCH /users/me` | Lecture publique / authentifié | profil public / champs modifiables → profil public | Disponible ; profil développeur avec handle, spécialité, niveau, intérêts, technologies et URL GitHub ; champs sensibles exclus. |
 | `GET /users?search=...&page=...&limit=...` | Authentifié | recherche nom/pseudo et pagination → `{ items, page, limit, total, hasMore }` | Disponible ; n'inclut pas l'adresse e-mail ni le profil de la personne connectée ; 20 utilisateurs par défaut, 50 maximum. |

@@ -1,4 +1,4 @@
-import {
+﻿import {
   ConnectedSocket,
   MessageBody,
   OnGatewayInit,
@@ -36,7 +36,7 @@ type AuthenticatedSocket = Socket & {
 
 @WebSocketGateway({
   namespace: '/messaging',
-  cors: { origin: true, credentials: false },
+  cors: { origin: true, credentials: true },
 })
 export class MessagingGateway implements OnGatewayInit {
   @WebSocketServer()
@@ -71,8 +71,17 @@ export class MessagingGateway implements OnGatewayInit {
         next(new Error('API_KEY_INVALID'));
         return;
       }
-      const token = socket.handshake.auth.token;
-      if (typeof token !== 'string') {
+      let token: string | null =
+        typeof socket.handshake.auth?.token === 'string' && socket.handshake.auth.token.length > 0
+          ? socket.handshake.auth.token
+          : null;
+
+      if (!token && socket.handshake.headers?.cookie) {
+        const cookies = parseCookies(socket.handshake.headers.cookie);
+        token = cookies['access_token'] ?? null;
+      }
+
+      if (!token) {
         next(new Error('UNAUTHENTICATED'));
         return;
       }
@@ -230,4 +239,16 @@ export class MessagingGateway implements OnGatewayInit {
       .emit('typing:stopped', { userId: socket.data.userId });
     return { typing: false };
   }
+}
+
+function parseCookies(header: string): Record<string, string> {
+  const list: Record<string, string> = {};
+  header.split(';').forEach((cookie) => {
+    const parts = cookie.split('=');
+    const key = parts.shift()?.trim();
+    if (key) {
+      list[key] = decodeURIComponent(parts.join('='));
+    }
+  });
+  return list;
 }

@@ -1,7 +1,7 @@
 ﻿export const API_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 export const BASE = `${API_URL}/api/v1`;
 export const FRONTEND_API_KEY = (import.meta.env.VITE_API_KEY as string | undefined) ?? 'b4f7b88eff2a716ce8c2b0f045c38a37c00cc6959a2df30f970f9c5a2e487d9b';
-const TOKEN_KEY = 'hw.token';
+const LEGACY_TOKEN_KEY = 'hw.token';
 
 export class ApiError extends Error {
   status: number;
@@ -55,20 +55,11 @@ const BY_STATUS: Record<number, string> = {
   503: "Ce service n'est pas disponible sur le serveur pour le moment.",
 };
 
-export function getToken(): string | null {
+export function clearLegacyToken(): void {
   try {
-    return localStorage.getItem(TOKEN_KEY);
+    localStorage.removeItem(LEGACY_TOKEN_KEY);
   } catch {
-    return null;
-  }
-}
-
-export function setToken(token: string | null): void {
-  try {
-    if (token) localStorage.setItem(TOKEN_KEY, token);
-    else localStorage.removeItem(TOKEN_KEY);
-  } catch {
-    // Stockage indisponible (navigation privée) : la session reste en mémoire le temps de l'onglet.
+    // Le stockage peut être indisponible, le cookie reste la source d'authentification.
   }
 }
 
@@ -78,19 +69,18 @@ export function setUnauthorizedHandler(handler: () => void): void {
 }
 
 export async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const token = getToken();
   let response: Response;
   try {
     response = await fetch(`${BASE}${path}`, {
       method,
       cache: 'no-store',
+      credentials: 'include',
       headers: {
         'x-api-key': FRONTEND_API_KEY,
         ...(import.meta.env.VITE_API_KEY
           ? { 'x-api-key': import.meta.env.VITE_API_KEY }
           : {}),
         ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
@@ -108,7 +98,7 @@ export async function request<T>(method: string, path: string, body?: unknown): 
         message: data?.message,
       });
     }
-    if (response.status === 401 && token) onUnauthorized();
+    if (response.status === 401 && !path.startsWith('/auth/')) onUnauthorized();
     const serverMsg = typeof data?.message === 'string' && data.message.length > 0 ? data.message : null;
     throw new ApiError(
       response.status,

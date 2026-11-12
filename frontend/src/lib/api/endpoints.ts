@@ -1,4 +1,4 @@
-import type { AuthResponse, Comment, Contribution, Media, Notification, Page, Post, PostType, Project, RepoPreview, Task, UploadSignature, User, UserPage } from './types';
+﻿import type { AuthResponse, Comment, Contribution, Media, Notification, Page, Post, PostType, Project, RepoPreview, Task, UploadSignature, User, UserPage } from './types';
 import { BASE, qs, request } from './client';
 export const api = {
   // Auth — nouveau flux en deux phases
@@ -20,6 +20,7 @@ export const api = {
   verifyEmail: (email: string, code: string) => request<AuthResponse>('POST', '/auth/email/verify', { email, code }),
   resendVerification: (email: string) => request<{ message: string }>('POST', '/auth/email/resend', { email }),
   login: (email: string, password: string) => request<AuthResponse>('POST', '/auth/login', { email, password }),
+  logout: () => request<{ success: true }>('POST', '/auth/logout'),
   requestPasswordReset: (email: string) => request<{ message: string; email: string; expiresIn: number }>('POST', '/auth/password/forgot', { email }),
   resetPassword: (email: string, code: string, password: string) =>
     request<{ message: string }>('POST', '/auth/password/reset', { email, code, password }),

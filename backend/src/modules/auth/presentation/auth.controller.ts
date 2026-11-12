@@ -1,4 +1,13 @@
-﻿import { Body, Controller, Get, Param, Post, Req, Res, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
@@ -31,6 +40,8 @@ interface OAuthRequest {
   user: OAuthIdentity;
 }
 
+type PublicAuthResponse = Pick<AuthResponse, 'expiresIn' | 'user'>;
+
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
@@ -39,6 +50,27 @@ export class AuthController {
     private readonly config: ConfigService<Environment, true>,
   ) {}
 
+  private setAuthCookie(response: Response, token: string): void {
+    const isProduction = process.env.NODE_ENV === 'production';
+    response.cookie('access_token', token, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 jours
+    });
+  }
+
+  private clearAuthCookie(response: Response): void {
+    const isProduction = process.env.NODE_ENV === 'production';
+    response.clearCookie('access_token', {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      path: '/',
+    });
+  }
+
   // ---------------------------------------------------------------------------
   // Nouveau flux d'inscription en deux phases
   // ---------------------------------------------------------------------------
@@ -46,15 +78,25 @@ export class AuthController {
   @Post('register/init')
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @ApiOperation({ summary: 'Start registration: validate email and send OTP' })
-  initRegistration(@Body() input: InitRegistrationDto): Promise<RegistrationResponse> {
+  initRegistration(
+    @Body() input: InitRegistrationDto,
+  ): Promise<RegistrationResponse> {
     return this.authService.initRegistration(input);
   }
 
   @Post('register/complete')
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
-  @ApiOperation({ summary: 'Complete registration: choose username and password (email must be verified first)' })
-  completeRegistration(@Body() input: CompleteRegistrationDto): Promise<AuthResponse> {
-    return this.authService.completeRegistration(input);
+  @ApiOperation({
+    summary:
+      'Complete registration: choose username and password (email must be verified first)',
+  })
+  async completeRegistration(
+    @Body() input: CompleteRegistrationDto,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<PublicAuthResponse> {
+    const auth = await this.authService.completeRegistration(input);
+    this.setAuthCookie(response, auth.accessToken);
+    return this.toPublicAuthResponse(auth);
   }
 
   @Get('register/username/:username')
@@ -80,8 +122,16 @@ export class AuthController {
   @Post('email/verify')
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({ summary: 'Verify a new account using its emailed code' })
-  verifyEmail(@Body() input: VerifyEmailDto): Promise<AuthResponse | EmailVerifiedResponse> {
-    return this.authService.verifyEmail(input);
+  async verifyEmail(
+    @Body() input: VerifyEmailDto,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<PublicAuthResponse | EmailVerifiedResponse> {
+    const result = await this.authService.verifyEmail(input);
+    if ('accessToken' in result) {
+      this.setAuthCookie(response, result.accessToken);
+      return this.toPublicAuthResponse(result);
+    }
+    return result;
   }
 
   @Post('email/resend')
@@ -105,15 +155,32 @@ export class AuthController {
   @Post('login/verify')
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({ summary: 'Sign in using a one-time email code' })
-  verifyLoginCode(@Body() input: VerifyLoginCodeDto): Promise<AuthResponse> {
-    return this.authService.verifyLoginCode(input);
+  async verifyLoginCode(
+    @Body() input: VerifyLoginCodeDto,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<PublicAuthResponse> {
+    const auth = await this.authService.verifyLoginCode(input);
+    this.setAuthCookie(response, auth.accessToken);
+    return this.toPublicAuthResponse(auth);
   }
 
   @Post('login')
   @Throttle({ default: { limit: 15, ttl: 60_000 } })
   @ApiOperation({ summary: 'Sign in with email and password' })
-  login(@Body() input: LoginDto): Promise<AuthResponse> {
-    return this.authService.login(input);
+  async login(
+    @Body() input: LoginDto,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<PublicAuthResponse> {
+    const auth = await this.authService.login(input);
+    this.setAuthCookie(response, auth.accessToken);
+    return this.toPublicAuthResponse(auth);
+  }
+
+  @Post('logout')
+  @ApiOperation({ summary: 'Sign out and clear auth cookie' })
+  logout(@Res({ passthrough: true }) response: Response): { success: true } {
+    this.clearAuthCookie(response);
+    return { success: true };
   }
 
   @Post('password/forgot')
@@ -169,17 +236,18 @@ export class AuthController {
     response: Response,
   ): Promise<void> {
     const auth = await this.authService.loginWithOAuth(identity);
+    this.setAuthCookie(response, auth.accessToken);
     const needsOnboarding =
       !auth.user.specialty ||
       !auth.user.experienceLevel ||
       auth.user.interests.length === 0;
     const frontendUrl = this.config.get('CORS_ORIGINS', { infer: true }).split(',')[0]!;
-    const fragment = new URLSearchParams({
-      accessToken: auth.accessToken,
-      expiresIn: String(auth.expiresIn),
-    });
     response.redirect(
-      `${frontendUrl}/oauth/callback${needsOnboarding ? '?onboarding=1' : ''}#${fragment.toString()}`,
+      `${frontendUrl}/oauth/callback${needsOnboarding ? '?onboarding=1' : ''}`,
     );
+  }
+
+  private toPublicAuthResponse(auth: AuthResponse): PublicAuthResponse {
+    return { expiresIn: auth.expiresIn, user: auth.user };
   }
 }
