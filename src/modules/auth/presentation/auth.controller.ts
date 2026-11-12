@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
@@ -8,10 +8,13 @@ import {
   AuthService,
   type AuthResponse,
   type RegistrationResponse,
+  type EmailVerifiedResponse,
 } from '../application/auth.service.js';
 import type { OAuthIdentity } from '../domain/oauth-identity.js';
 import { LoginDto } from './dto/login.dto.js';
 import { RegisterDto } from './dto/register.dto.js';
+import { InitRegistrationDto } from './dto/init-registration.dto.js';
+import { CompleteRegistrationDto } from './dto/complete-registration.dto.js';
 import { ResendVerificationDto } from './dto/resend-verification.dto.js';
 import { RequestLoginCodeDto } from './dto/request-login-code.dto.js';
 import { VerifyEmailDto } from './dto/verify-email.dto.js';
@@ -36,6 +39,37 @@ export class AuthController {
     private readonly config: ConfigService<Environment, true>,
   ) {}
 
+  // ---------------------------------------------------------------------------
+  // Nouveau flux d'inscription en deux phases
+  // ---------------------------------------------------------------------------
+
+  @Post('register/init')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Start registration: validate email and send OTP' })
+  initRegistration(@Body() input: InitRegistrationDto): Promise<RegistrationResponse> {
+    return this.authService.initRegistration(input);
+  }
+
+  @Post('register/complete')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Complete registration: choose username and password (email must be verified first)' })
+  completeRegistration(@Body() input: CompleteRegistrationDto): Promise<AuthResponse> {
+    return this.authService.completeRegistration(input);
+  }
+
+  @Get('register/username/:username')
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Check if a username is available' })
+  async checkUsername(
+    @Param('username') username: string,
+  ): Promise<{ available: boolean }> {
+    return this.authService.checkUsernameAvailability(username);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Ancien flux (conservé pour compatibilité)
+  // ---------------------------------------------------------------------------
+
   @Post('register')
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @ApiOperation({ summary: 'Register and send an email verification code' })
@@ -46,7 +80,7 @@ export class AuthController {
   @Post('email/verify')
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({ summary: 'Verify a new account using its emailed code' })
-  verifyEmail(@Body() input: VerifyEmailDto): Promise<AuthResponse> {
+  verifyEmail(@Body() input: VerifyEmailDto): Promise<AuthResponse | EmailVerifiedResponse> {
     return this.authService.verifyEmail(input);
   }
 

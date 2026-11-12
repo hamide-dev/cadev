@@ -8,13 +8,10 @@ export interface Environment {
   CLOUDINARY_CLOUD_NAME?: string;
   CLOUDINARY_API_KEY?: string;
   CLOUDINARY_API_SECRET?: string;
-  SMTP_HOST?: string;
-  SMTP_PORT?: number;
-  SMTP_SECURE?: boolean;
-  SMTP_USER?: string;
-  SMTP_PASSWORD?: string;
-  SMTP_FROM_EMAIL?: string;
-  SMTP_FROM_NAME?: string;
+  BREVO_SMTP_LOGIN?: string;
+  BREVO_SMTP_KEY?: string;
+  BREVO_FROM_EMAIL?: string;
+  BREVO_FROM_NAME?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   GOOGLE_CALLBACK_URL?: string;
@@ -103,7 +100,7 @@ export function validateEnvironment(raw: RawEnvironment): Environment {
   if (cloudinaryCloudName && !/^[a-zA-Z0-9_-]+$/.test(cloudinaryCloudName)) {
     throw new Error('CLOUDINARY_CLOUD_NAME has an invalid format');
   }
-  const smtp = validateSmtp(raw);
+  const brevo = validateBrevo(raw);
   const googleValues = [
     optionalString(raw, 'GOOGLE_CLIENT_ID'),
     optionalString(raw, 'GOOGLE_CLIENT_SECRET'),
@@ -170,7 +167,7 @@ export function validateEnvironment(raw: RawEnvironment): Environment {
           CLOUDINARY_API_SECRET: cloudinaryApiSecret,
         }
       : {}),
-    ...smtp,
+    ...brevo,
     ...(googleValues[0]
       ? {
           GOOGLE_CLIENT_ID: googleValues[0],
@@ -188,41 +185,25 @@ export function validateEnvironment(raw: RawEnvironment): Environment {
   };
 }
 
-// Optional SMTP relay (e.g. the local Mailpit from docker-compose.yml).
-function validateSmtp(raw: RawEnvironment): Partial<Environment> {
-  const host = optionalString(raw, 'SMTP_HOST');
-  const fromEmail = optionalString(raw, 'SMTP_FROM_EMAIL');
+// Optional Brevo SMTP relay.
+function validateBrevo(raw: RawEnvironment): Partial<Environment> {
+  const login = optionalString(raw, 'BREVO_SMTP_LOGIN');
+  const key = optionalString(raw, 'BREVO_SMTP_KEY');
+  const fromEmail = optionalString(raw, 'BREVO_FROM_EMAIL');
   assertOptionalGroup(
-    [host, fromEmail],
-    'SMTP_HOST and SMTP_FROM_EMAIL must be configured together',
+    [login, key, fromEmail],
+    'BREVO_SMTP_LOGIN, BREVO_SMTP_KEY, and BREVO_FROM_EMAIL must be configured together',
   );
-  if (!host || !fromEmail) return {};
+  if (!login || !key || !fromEmail) return {};
   if (!isEmailAddress(fromEmail)) {
-    throw new Error('SMTP_FROM_EMAIL must be a valid email address');
+    throw new Error('BREVO_FROM_EMAIL must be a valid email address');
   }
-  const portValue = optionalString(raw, 'SMTP_PORT') ?? '587';
-  const port = /^\d+$/.test(portValue) ? Number(portValue) : Number.NaN;
-  if (!Number.isInteger(port) || port < 1 || port > 65535) {
-    throw new Error('SMTP_PORT must be an integer between 1 and 65535');
-  }
-  const secure = optionalString(raw, 'SMTP_SECURE') ?? 'false';
-  if (secure !== 'true' && secure !== 'false') {
-    throw new Error('SMTP_SECURE must be true or false');
-  }
-  const user = optionalString(raw, 'SMTP_USER');
-  const password = optionalString(raw, 'SMTP_PASSWORD');
-  assertOptionalGroup(
-    [user, password],
-    'SMTP_USER and SMTP_PASSWORD must be configured together',
-  );
-  const fromName = optionalString(raw, 'SMTP_FROM_NAME');
+  const fromName = optionalString(raw, 'BREVO_FROM_NAME');
   return {
-    SMTP_HOST: host,
-    SMTP_PORT: port,
-    SMTP_SECURE: secure === 'true',
-    SMTP_FROM_EMAIL: fromEmail,
-    ...(user ? { SMTP_USER: user, SMTP_PASSWORD: password } : {}),
-    ...(fromName ? { SMTP_FROM_NAME: fromName } : {}),
+    BREVO_SMTP_LOGIN: login,
+    BREVO_SMTP_KEY: key,
+    BREVO_FROM_EMAIL: fromEmail,
+    ...(fromName ? { BREVO_FROM_NAME: fromName } : {}),
   };
 }
 

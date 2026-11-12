@@ -260,6 +260,56 @@ export class UsersService {
     await this.follows.delete({ followerId, followedId: followed.id });
   }
 
+  async followingUsernames(followerId: string): Promise<string[]> {
+    const follows = await this.follows
+      .createQueryBuilder('follow')
+      .innerJoin('follow.followed', 'followed')
+      .select('followed.username', 'username')
+      .where('follow.followerId = :followerId', { followerId })
+      .getRawMany<{ username: string }>();
+    return follows.map(({ username }) => username);
+  }
+
+  async listUsers(input: {
+    excludeUserId: string;
+    search?: string;
+    page: number;
+    limit: number;
+  }): Promise<{
+    items: PublicUser[];
+    page: number;
+    limit: number;
+    total: number;
+    hasMore: boolean;
+  }> {
+    const query = this.users
+      .createQueryBuilder('user')
+      .where('user.emailVerified = :verified', { verified: true })
+      .andWhere('user.id != :excludeUserId', {
+        excludeUserId: input.excludeUserId,
+      });
+    const search = input.search?.trim();
+    if (search) {
+      query.andWhere(
+        '(user.username ILIKE :search OR user.displayName ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+    const [users, total] = await query
+      .orderBy('user.createdAt', 'DESC')
+      .addOrderBy('user.id', 'DESC')
+      .skip((input.page - 1) * input.limit)
+      .take(input.limit)
+      .getManyAndCount();
+    return {
+      items: users.map((user) => toPublicUser(user)),
+      page: input.page,
+      limit: input.limit,
+      total,
+      hasMore: input.page * input.limit < total,
+    };
+  }
+
   toPublic(user: UserEntity, includeEmail = false): PublicUser {
     return toPublicUser(user, includeEmail);
   }

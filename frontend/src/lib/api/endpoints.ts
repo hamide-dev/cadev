@@ -1,7 +1,20 @@
-import type { AuthResponse, Comment, Contribution, Media, Notification, Page, Post, PostType, Project, RepoPreview, Task, UploadSignature, User } from './types';
+import type { AuthResponse, Comment, Contribution, Media, Notification, Page, Post, PostType, Project, RepoPreview, Task, UploadSignature, User, UserPage } from './types';
 import { BASE, qs, request } from './client';
 export const api = {
-  // Auth
+  // Auth — nouveau flux en deux phases
+  /** Étape 1 : valide nom + e-mail et envoie l'OTP de vérification */
+  initRegistration: (input: { email: string; displayName: string }) =>
+    request<{ message: string; email: string; expiresIn: number }>('POST', '/auth/register/init', input),
+  /** Étape 1 suite : valide l'OTP reçu par e-mail (ne crée pas encore le compte) */
+  verifyInitOtp: (email: string, code: string) =>
+    request<{ emailVerified: true; email: string }>('POST', '/auth/email/verify', { email, code }),
+  /** Vérifie la disponibilité d'un username avant finalisation */
+  checkUsername: (username: string) =>
+    request<{ available: boolean }>('GET', `/auth/register/username/${encodeURIComponent(username)}`),
+  /** Étape 2 : finalise le compte avec username + password */
+  completeRegistration: (input: { email: string; username: string; password: string }) =>
+    request<AuthResponse>('POST', '/auth/register/complete', input),
+  // Flux legacy (conservé pour compatibilité)
   register: (input: { email: string; username: string; displayName: string; password: string }) =>
     request<{ message: string; email: string; expiresIn: number }>('POST', '/auth/register', input),
   verifyEmail: (email: string, code: string) => request<AuthResponse>('POST', '/auth/email/verify', { email, code }),
@@ -16,6 +29,9 @@ export const api = {
 
   // Utilisateurs
   me: () => request<User>('GET', '/users/me'),
+  followingUsers: () => request<{ usernames: string[] }>('GET', '/users/following'),
+  users: (search: string, page = 1, limit = 20) =>
+    request<UserPage>('GET', `/users${qs({ search: search || undefined, page, limit })}`),
   updateMe: (input: Partial<Omit<User, 'id' | 'email' | 'avatarUrl' | 'createdAt'>>) => request<User>('PATCH', '/users/me', input),
   user: (username: string) => request<User>('GET', `/users/${encodeURIComponent(username)}`),
   follow: (username: string) => request<{ following: true; friend: boolean }>('PUT', `/users/${encodeURIComponent(username)}/follow`),

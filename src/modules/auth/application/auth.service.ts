@@ -17,6 +17,8 @@ import { EmailVerificationEntity } from '../infrastructure/email-verification.en
 import { SmtpEmailService } from '../infrastructure/smtp-email.service.js';
 import type { PublicUser } from '../../users/domain/user.types.js';
 import type { RegisterDto } from '../presentation/dto/register.dto.js';
+import type { InitRegistrationDto } from '../presentation/dto/init-registration.dto.js';
+import type { CompleteRegistrationDto } from '../presentation/dto/complete-registration.dto.js';
 import type { LoginDto } from '../presentation/dto/login.dto.js';
 import type { RequestLoginCodeDto } from '../presentation/dto/request-login-code.dto.js';
 import type { VerifyEmailDto } from '../presentation/dto/verify-email.dto.js';
@@ -40,7 +42,13 @@ export interface RegistrationResponse {
   expiresIn: number;
 }
 
-const VERIFICATION_TTL_MS = 10 * 60 * 1000;
+/** Réponse renvoyée après validation OTP de l'étape 1 (email vérifié, compte pas encore créé). */
+export interface EmailVerifiedResponse {
+  emailVerified: true;
+  email: string;
+}
+
+const VERIFICATION_TTL_MS = 4 * 60 * 1000;
 const MAX_VERIFICATION_ATTEMPTS = 5;
 
 function assertBcryptPasswordLength(password: string): void {
@@ -65,6 +73,137 @@ export class AuthService {
     private readonly pendingRegistrations: Repository<PendingRegistrationEntity>,
   ) {}
 
+  // ---------------------------------------------------------------------------
+  // Nouveau flux en deux phases
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Étape 1 : reçoit nom + e-mail, vérifie que l'adresse n'est pas déjà prise,
+   * crée une pré-inscription et envoie un code OTP par e-mail.
+   */
+  async initRegistration(input: InitRegistrationDto): Promise<RegistrationResponse> {
+    const email = input.email.trim().toLowerCase();
+    const displayName = input.displayName.trim();
+
+    await this.pendingRegistrations.delete({ expiresAt: LessThan(new Date()) });
+
+    if (await this.usersService.findByEmail(email)) {
+      throw emailAlreadyExists();
+    }
+
+    let pending = await this.pendingRegistrations.findOneBy({ email });
+    if (!pending) {
+      pending = this.pendingRegistrations.create({
+        id: randomUUID(),
+        email,
+        username: null,
+        displayName,
+        passwordHash: null,
+        codeHash: null,
+        emailVerified: false,
+        attempts: 0,
+        expiresAt: new Date(),
+      });
+    } else {
+      // Réinitialise la pré-inscription si l'utilisateur recommence depuis le début.
+      pending.emailVerified = false;
+      pending.username = null;
+      pending.passwordHash = null;
+    }
+    pending.displayName = displayName;
+    await this.sendPendingRegistrationCode(pending);
+    return {
+      message: 'A verification code has been sent to your email address.',
+      email,
+      expiresIn: VERIFICATION_TTL_MS / 1000,
+    };
+  }
+
+  /**
+   * Étape 1 (suite) : valide l'OTP envoyé lors de initRegistration.
+   * Marque l'e-mail comme vérifié dans la pré-inscription mais NE crée PAS encore le compte.
+   * L'utilisateur doit ensuite choisir son pseudo et son mot de passe.
+   */
+  async verifyInitOtp(email: string, code: string): Promise<EmailVerifiedResponse> {
+    const normalizedEmail = email.trim().toLowerCase();
+    const pending = await this.pendingRegistrations.findOneBy({ email: normalizedEmail });
+    if (!pending || pending.emailVerified) {
+      // Si déjà vérifié ou introuvable, on délègue au flux legacy
+      throw invalidVerificationCode();
+    }
+    await this.checkAndConsumeOtpOnPending(pending, code, false);
+    // Marque la pré-inscription comme e-mail vérifié
+    pending.emailVerified = true;
+    pending.codeHash = null;
+    // Renouvelle l'expiration pour laisser le temps à l'utilisateur de choisir son pseudo
+    pending.expiresAt = new Date(Date.now() + VERIFICATION_TTL_MS);
+    await this.pendingRegistrations.save(pending);
+    return { emailVerified: true, email: normalizedEmail };
+  }
+
+  /**
+   * Vérifie si un nom d'utilisateur est disponible (ni en base, ni en pré-inscription).
+   */
+  async checkUsernameAvailability(username: string): Promise<{ available: boolean }> {
+    const normalized = username.trim().toLowerCase();
+    if (!/^[a-zA-Z0-9_]{3,20}$/.test(normalized)) {
+      return { available: false };
+    }
+    const inUse =
+      (await this.usersService.findByUsername(normalized)) !== null ||
+      (await this.pendingRegistrations.findOneBy({ username: normalized })) !== null;
+    return { available: !inUse };
+  }
+
+  /**
+   * Étape 2 : reçoit l'e-mail (vérifié), le pseudo et le mot de passe.
+   * Vérifie la disponibilité du pseudo, puis crée le compte définitif.
+   */
+  async completeRegistration(input: CompleteRegistrationDto): Promise<AuthResponse> {
+    assertBcryptPasswordLength(input.password);
+    const email = input.email.trim().toLowerCase();
+    const username = input.username.trim().toLowerCase();
+
+    const pending = await this.pendingRegistrations.findOneBy({ email });
+    if (!pending || !pending.emailVerified) {
+      throw new ForbiddenException({
+        code: 'EMAIL_VERIFICATION_REQUIRED',
+        message: 'Verify your email address before completing registration.',
+      });
+    }
+    if (pending.expiresAt.getTime() <= Date.now()) {
+      await this.pendingRegistrations.delete({ id: pending.id });
+      throw new ForbiddenException({
+        code: 'REGISTRATION_EXPIRED',
+        message: 'Your registration session has expired. Please start over.',
+      });
+    }
+
+    // Vérifie la disponibilité du pseudo
+    if (await this.usersService.findByUsername(username)) {
+      throw usernameAlreadyExists();
+    }
+    const pendingWithUsername = await this.pendingRegistrations.findOneBy({ username });
+    if (pendingWithUsername && pendingWithUsername.email !== email) {
+      throw usernameAlreadyExists();
+    }
+
+    const passwordHash = await bcrypt.hash(input.password, 12);
+    const user = await this.usersService.create({
+      email: pending.email,
+      username,
+      displayName: pending.displayName,
+      passwordHash,
+      emailVerified: true,
+    });
+    await this.pendingRegistrations.delete({ id: pending.id });
+    return this.issueToken(user.id, user.email, this.usersService.toPublic(user));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Ancien flux (conservé pour compatibilité et OAuth)
+  // ---------------------------------------------------------------------------
+
   async register(input: RegisterDto): Promise<RegistrationResponse> {
     assertBcryptPasswordLength(input.password);
     const email = input.email.trim().toLowerCase();
@@ -72,10 +211,10 @@ export class AuthService {
 
     await this.pendingRegistrations.delete({ expiresAt: LessThan(new Date()) });
     if (await this.usersService.findByEmail(email)) {
-      throw registrationConflict('An account with this email already exists.');
+      throw emailAlreadyExists();
     }
     if (await this.usersService.findByUsername(username)) {
-      throw registrationConflict('This username is already in use.');
+      throw usernameAlreadyExists();
     }
 
     const pendingWithUsername = await this.pendingRegistrations.findOneBy({
@@ -83,7 +222,7 @@ export class AuthService {
     });
     const pending = await this.pendingRegistrations.findOneBy({ email });
     if (pendingWithUsername && pendingWithUsername.email !== email) {
-      throw registrationConflict('This username is already in use.');
+      throw usernameAlreadyExists();
     }
     const registration =
       pending ??
@@ -92,8 +231,9 @@ export class AuthService {
         email,
         username,
         displayName: input.displayName.trim(),
-        passwordHash: '',
-        codeHash: '',
+        passwordHash: null,
+        codeHash: null,
+        emailVerified: false,
         attempts: 0,
         expiresAt: new Date(),
       });
@@ -108,10 +248,20 @@ export class AuthService {
     };
   }
 
-  async verifyEmail(input: VerifyEmailDto): Promise<AuthResponse> {
+  async verifyEmail(input: VerifyEmailDto): Promise<AuthResponse | EmailVerifiedResponse> {
     const email = input.email.trim().toLowerCase();
     const pending = await this.pendingRegistrations.findOneBy({ email });
-    if (pending) return this.verifyPendingRegistration(pending, input.code);
+    if (pending) {
+      // Nouveau flux : OTP de pré-inscription (étape 1, e-mail pas encore vérifié)
+      if (!pending.emailVerified) {
+        return this.verifyInitOtp(email, input.code);
+      }
+      // Ancien flux : pré-inscription complète (username + password déjà renseignés)
+      if (pending.username && pending.passwordHash) {
+        return this.verifyPendingRegistration(pending, input.code);
+      }
+      throw invalidVerificationCode();
+    }
 
     const user = await this.usersService.findByEmail(email);
     if (!user) {
@@ -174,7 +324,9 @@ export class AuthService {
     const pending = await this.pendingRegistrations.findOneBy({
       email: normalizedEmail,
     });
-    if (pending) await this.sendPendingRegistrationCode(pending);
+    if (pending && !pending.emailVerified) {
+      await this.sendPendingRegistrationCode(pending);
+    }
     const user = await this.usersService.findByEmail(normalizedEmail);
     if (!pending && user && !user.emailVerified) {
       await this.sendVerificationCode(user.id, user.email);
@@ -351,6 +503,10 @@ export class AuthService {
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // Helpers privés
+  // ---------------------------------------------------------------------------
+
   private async sendVerificationCode(
     userId: string,
     email: string,
@@ -389,12 +545,20 @@ export class AuthService {
     );
   }
 
-  private async verifyPendingRegistration(
+  /**
+   * Vérifie l'OTP d'une pré-inscription et incrémente le compteur de tentatives.
+   * @param consume Si true, supprime le codeHash après succès (pour le flux legacy).
+   */
+  private async checkAndConsumeOtpOnPending(
     pending: PendingRegistrationEntity,
     code: string,
-  ): Promise<AuthResponse> {
+    consume: boolean,
+  ): Promise<void> {
     if (pending.expiresAt.getTime() <= Date.now()) {
       await this.pendingRegistrations.delete({ id: pending.id });
+      throw invalidVerificationCode();
+    }
+    if (!pending.codeHash) {
       throw invalidVerificationCode();
     }
     const attempts = await this.pendingRegistrations.increment(
@@ -421,12 +585,22 @@ export class AuthService {
     ) {
       throw invalidVerificationCode();
     }
+    if (consume) {
+      pending.codeHash = null;
+    }
+  }
+
+  private async verifyPendingRegistration(
+    pending: PendingRegistrationEntity,
+    code: string,
+  ): Promise<AuthResponse> {
+    await this.checkAndConsumeOtpOnPending(pending, code, true);
 
     const user = await this.usersService.create({
       email: pending.email,
-      username: pending.username,
+      username: pending.username!,
       displayName: pending.displayName,
-      passwordHash: pending.passwordHash,
+      passwordHash: pending.passwordHash!,
       emailVerified: true,
     });
     await this.pendingRegistrations.delete({ id: pending.id });
@@ -468,6 +642,20 @@ function invalidVerificationCode(): UnauthorizedException {
   return new UnauthorizedException({
     code: 'INVALID_VERIFICATION_CODE',
     message: 'The verification code is invalid or expired.',
+  });
+}
+
+function emailAlreadyExists(): ConflictException {
+  return new ConflictException({
+    code: 'EMAIL_ALREADY_EXISTS',
+    message: 'Cet email est déjà associé à un compte.',
+  });
+}
+
+function usernameAlreadyExists(): ConflictException {
+  return new ConflictException({
+    code: 'USERNAME_ALREADY_EXISTS',
+    message: 'Ce pseudo est déjà utilisé.',
   });
 }
 

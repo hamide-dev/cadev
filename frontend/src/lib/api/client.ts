@@ -1,4 +1,4 @@
-export const API_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:3000').replace(/\/$/, '');
+﻿export const API_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 export const BASE = `${API_URL}/api/v1`;
 const TOKEN_KEY = 'hw.token';
 
@@ -20,11 +20,14 @@ const MESSAGES: Record<string, string> = {
   EMAIL_ALREADY_VERIFIED: 'Cette adresse est déjà vérifiée, tu peux te connecter.',
   EMAIL_VERIFICATION_REQUIRED: "Ton adresse n'est pas encore vérifiée. Termine l'inscription avec le code reçu.",
   EMAIL_PROVIDER_NOT_CONFIGURED: "L'envoi d'e-mails n'est pas encore configuré sur ce serveur. Connecte-toi avec ton mot de passe.",
-  EMAIL_PROVIDER_AUTH_FAILED: "Le serveur SMTP a refusé les identifiants configurés. Vérifie SMTP_USER et SMTP_PASSWORD.",
+  EMAIL_PROVIDER_AUTH_FAILED: "Brevo a refusé les identifiants SMTP. Vérifie BREVO_SMTP_LOGIN et BREVO_SMTP_KEY.",
   EMAIL_PROVIDER_IP_NOT_AUTHORIZED: "Le serveur SMTP n'autorise pas cette machine. Vérifie sa liste d'accès réseau.",
   EMAIL_PROVIDER_UNAVAILABLE: "Impossible de joindre le serveur SMTP. Vérifie son adresse, son port et son état.",
   EMAIL_PROVIDER_RATE_LIMITED: "Le serveur SMTP limite temporairement l'envoi. Patiente avant de redemander un code.",
   EMAIL_PROVIDER_SEND_FAILED: "Le serveur SMTP a refusé l'envoi. Vérifie l'adresse expéditrice autorisée.",
+  EMAIL_ALREADY_EXISTS: 'Cet e-mail est déjà associé à un compte.',
+  USERNAME_ALREADY_EXISTS: 'Ce pseudo est déjà pris.',
+  REGISTRATION_CONFLICT: 'Cet e-mail ou ce pseudo est déjà associé à un compte.',
   ACCOUNT_ALREADY_EXISTS: 'Un compte existe déjà avec cet e-mail ou ce pseudo.',
   CANNOT_FOLLOW_SELF: 'Tu ne peux pas te suivre toi-même.',
   USER_NOT_FOUND: "Ce développeur n'existe pas.",

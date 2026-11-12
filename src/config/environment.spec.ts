@@ -52,28 +52,25 @@ describe('validateEnvironment', () => {
     ).toThrow('CORS_ORIGINS contains an invalid HTTP(S) origin');
   });
 
-  it('parses the local SMTP relay settings', () => {
+  it('parses Brevo SMTP settings', () => {
     expect(
       validateEnvironment({
         ...validEnvironment,
-        SMTP_HOST: '127.0.0.1',
-        SMTP_PORT: '1025',
-        SMTP_SECURE: 'false',
-        SMTP_USER: '',
-        SMTP_FROM_EMAIL: 'no-reply@example.test',
+        BREVO_SMTP_LOGIN: 'smtp-login@example.test',
+        BREVO_SMTP_KEY: 'smtp-key',
+        BREVO_FROM_EMAIL: 'no-reply@example.test',
       }),
     ).toMatchObject({
-      SMTP_HOST: '127.0.0.1',
-      SMTP_PORT: 1025,
-      SMTP_SECURE: false,
-      SMTP_FROM_EMAIL: 'no-reply@example.test',
+      BREVO_SMTP_LOGIN: 'smtp-login@example.test',
+      BREVO_SMTP_KEY: 'smtp-key',
+      BREVO_FROM_EMAIL: 'no-reply@example.test',
     });
   });
 
-  it('requires the SMTP host and sender email together', () => {
+  it('requires all Brevo SMTP settings together', () => {
     expect(() =>
-      validateEnvironment({ ...validEnvironment, SMTP_HOST: '127.0.0.1' }),
-    ).toThrow('SMTP_HOST and SMTP_FROM_EMAIL must be configured together');
+      validateEnvironment({ ...validEnvironment, BREVO_SMTP_LOGIN: 'login' }),
+    ).toThrow('BREVO_SMTP_LOGIN, BREVO_SMTP_KEY, and BREVO_FROM_EMAIL must be configured together');
   });
 
 });

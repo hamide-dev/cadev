@@ -11,7 +11,7 @@ Les réponses exposent uniquement les champs explicitement autorisés.
 |---|---|
 | HTTP | `POST /api/v1/auth/register`, `POST /api/v1/auth/email/verify`, `POST /api/v1/auth/email/resend`, `POST /api/v1/auth/login`, `POST /api/v1/auth/login/code`, `POST /api/v1/auth/login/verify` |
 | HTTP / OAuth | `GET /api/v1/auth/google`, `GET /api/v1/auth/google/callback`, `GET /api/v1/auth/github`, `GET /api/v1/auth/github/callback` |
-| HTTP | `GET /api/v1/users/:username`, `GET/PATCH /api/v1/users/me`, `PUT/DELETE /api/v1/users/:username/follow` |
+| HTTP | `GET /api/v1/users?search=...&page=...&limit=...`, `GET /api/v1/users/:username`, `GET/PATCH /api/v1/users/me`, `GET /api/v1/users/following`, `PUT/DELETE /api/v1/users/:username/follow` |
 | HTTP | Publications et flux : `GET/POST /api/v1/posts`, `/posts/feed/following`, `/posts/feed/for-you`, `/posts/users/:username`, brouillons, likes et épinglage |
 | HTTP | Médias de publication : `POST /api/v1/media/posts/signature`, `POST /api/v1/media/posts/confirm` |
 | HTTP | `GET/POST /api/v1/posts/:postId/comments`, `PATCH/DELETE /api/v1/posts/comments/:commentId` |
@@ -24,7 +24,7 @@ d'adresse e-mail, profils de développeur, abonnements, posts et médias,
 commentaires/réponses, votes utiles, suivi de questions et conversations directes/groupes avec messages de texte,
 code, lien ou pièce jointe. Les posts prennent en charge les brouillons, likes,
 mentions, épinglage et flux paginés. Les inscriptions locales envoient un OTP
-à 4 chiffres via SMTP ; OAuth Google/GitHub accepte uniquement des adresses
+à 4 chiffres via le relais SMTP Brevo ; OAuth Google/GitHub accepte uniquement des adresses
 vérifiées par le fournisseur.
 
 Non encore livrés : refresh tokens rotatifs et révocables,
@@ -94,15 +94,17 @@ depuis un champ `userId` fourni par le client.
 
 | Méthode et chemin | Auth. | Entrée / sortie principale | Règles notables |
 |---|---|---|---|
-| `POST /auth/register` | Non | `email`, `username`, `displayName`, `password` → statut d'envoi OTP | Disponible ; conserve uniquement une inscription en attente, aucun compte utilisateur ni token avant vérification ; code à 4 chiffres valable 10 min, 5 tentatives maximum. |
+| `POST /auth/register` | Non | `email`, `username`, `displayName`, `password` → statut d'envoi OTP | Disponible ; conserve uniquement une inscription en attente, aucun compte utilisateur ni token avant vérification ; code à 4 chiffres valable 4 min, 5 tentatives maximum. |
 | `POST /auth/email/verify` | Non | `email`, `code` → access JWT + utilisateur public | Disponible ; crée le compte avec l'adresse vérifiée uniquement après validation du code et consomme l'inscription en attente. |
 | `POST /auth/email/resend` | Non | `email` → statut générique d'envoi | Disponible ; limite de débit, ne révèle pas si un compte existe. |
 | `POST /auth/login` | Non | e-mail + mot de passe → access JWT + utilisateur public | Disponible ; réservé aux comptes vérifiés ; limitation de débit. |
-| `POST /auth/login/code`, `POST /auth/login/verify` | Non | e-mail puis code à 4 chiffres → access JWT + utilisateur public | Disponible ; OTP à durée limitée et à usage unique ; réponse d'envoi générique. |
+| `POST /auth/login/code`, `POST /auth/login/verify` | Non | e-mail puis code à 4 chiffres → access JWT + utilisateur public | Disponible ; OTP valable 4 min, à usage unique ; réponse d'envoi générique. |
 | `GET /auth/google`, `GET /auth/google/callback` | OAuth | Redirection fournisseur puis access JWT + utilisateur public JSON | Disponible si les identifiants OAuth sont configurés ; e-mail Google vérifié requis. |
 | `GET /auth/github`, `GET /auth/github/callback` | OAuth | Redirection fournisseur puis access JWT + utilisateur public JSON | Disponible si les identifiants OAuth sont configurés ; e-mail principal GitHub vérifié requis. |
 | `POST /auth/refresh`, `POST /auth/logout` | Session | refresh/révocation → résultat | Prévu, non disponible. |
 | `GET /users/:username`, `GET/PATCH /users/me` | Lecture publique / authentifié | profil public / champs modifiables → profil public | Disponible ; profil développeur avec handle, spécialité, niveau, intérêts, technologies et URL GitHub ; champs sensibles exclus. |
+| `GET /users?search=...&page=...&limit=...` | Authentifié | recherche nom/pseudo et pagination → `{ items, page, limit, total, hasMore }` | Disponible ; n'inclut pas l'adresse e-mail ni le profil de la personne connectée ; 20 utilisateurs par défaut, 50 maximum. |
+| `GET /users/following` | Authentifié | → `{ usernames }` | Disponible ; utilisé pour restaurer l'état des abonnements dans Explorer. |
 | `PUT/DELETE /users/:username/follow` | Authentifié | handle → état d'abonnement | Disponible ; pas d'auto-abonnement ; idempotent. |
 | `GET /posts`, `GET /posts/users/:username` | Public | curseur opaque, limite → `{ items, nextCursor, hasMore }` | Disponible ; ordre chronologique stable `(createdAt, id)`, brouillons exclus. |
 | `GET /posts/feed/following`, `GET /posts/feed/for-you` | Authentifié | curseur opaque, limite → page | Disponible ; flux chronologique des abonnements et toutes les publications publiques de la communauté, sans filtre de catégorie. |

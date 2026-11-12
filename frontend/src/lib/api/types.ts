@@ -20,6 +20,14 @@ export interface User {
   createdAt: string;
 }
 
+export interface UserPage {
+  items: User[];
+  page: number;
+  limit: number;
+  total: number;
+  hasMore: boolean;
+}
+
 export type Author = Pick<User, 'id' | 'username' | 'displayName' | 'avatarUrl'>;
 
 export interface Media {

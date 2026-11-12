@@ -43,6 +43,7 @@ Parcours disponibles dans cette première tranche :
   demander et valider un code OTP de connexion à 4 chiffres
 - `GET /api/v1/auth/google` et `/api/v1/auth/github` pour OAuth ; les callbacks
   renvoient le résultat d'authentification JSON
+- `GET /api/v1/users?search=...&page=...&limit=...` pour rechercher et parcourir les utilisateurs par pages
 - `GET /api/v1/users/:username`, `GET/PATCH /api/v1/users/me`
 - `PUT/DELETE /api/v1/users/:username/follow` pour suivre/ne plus suivre un
   développeur
@@ -85,10 +86,9 @@ Parcours disponibles dans cette première tranche :
 | `CLOUDINARY_CLOUD_NAME` | Optionnel | Nom du compte Cloudinary |
 | `CLOUDINARY_API_KEY` | Optionnel | Clé publique Cloudinary |
 | `CLOUDINARY_API_SECRET` | Optionnel | Secret privé Cloudinary, serveur uniquement |
-| `SMTP_HOST`, `SMTP_FROM_EMAIL` | Optionnel | Serveur SMTP et expéditeur |
-| `SMTP_PORT`, `SMTP_SECURE` | Non | Défaut `587` et `false` (Mailpit local : `1025`, `false`) |
-| `SMTP_USER`, `SMTP_PASSWORD` | Optionnel | Identifiants SMTP, requis ensemble, vides pour Mailpit |
-| `SMTP_FROM_NAME` | Optionnel | Nom expéditeur, défaut `Hello World` |
+| `BREVO_SMTP_LOGIN`, `BREVO_SMTP_KEY` | Optionnel | Identifiants SMTP Brevo (login SMTP et clé SMTP, pas la clé API) |
+| `BREVO_FROM_EMAIL` | Optionnel | Adresse expéditeur vérifiée dans Brevo |
+| `BREVO_FROM_NAME` | Optionnel | Nom expéditeur, défaut `Hello World` |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_CALLBACK_URL` | Optionnel | Identifiants et callback OAuth Google |
 | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_CALLBACK_URL` | Optionnel | Identifiants et callback OAuth GitHub |
 
@@ -100,24 +100,21 @@ sa spécialité, son niveau et ses centres d'intérêt avant d'accéder au fil.
 Les trois paramètres Cloudinary peuvent rester vides pendant le développement ;
 les opérations médias répondent alors `503 MEDIA_PROVIDER_NOT_CONFIGURED`.
 Ils doivent être définis ensemble pour activer le service.
-`SMTP_HOST` et `SMTP_FROM_EMAIL` sont requis ensemble pour envoyer les OTP.
+`BREVO_SMTP_LOGIN`, `BREVO_SMTP_KEY` et `BREVO_FROM_EMAIL` sont requis ensemble
+pour envoyer les OTP via `smtp-relay.brevo.com` (port 587). L'adresse expéditeur
+doit être vérifiée dans Brevo.
 Les inscriptions locales restent bloquées à l'étape de vérification tant que le
 service d'e-mail n'est pas configuré. Chaque fournisseur OAuth est optionnel,
 mais ses trois paramètres doivent être définis ensemble. L'OTP à 4 chiffres
 est demandé lors de l'inscription locale et peut aussi servir à la connexion
-par e-mail ; la connexion par mot de passe reste disponible. Google et GitHub
-doivent retourner une adresse e-mail vérifiée.
-### Serveur mail local (Mailpit)
+par e-mail ; le code expire après 4 minutes. La connexion par mot de passe
+reste disponible. Google et GitHub doivent retourner une adresse e-mail
+vérifiée.
+### E-mails transactionnels Brevo
 
-Pour recevoir les codes OTP en local, `docker-compose.yml` lance Mailpit :
-
-```powershell
-docker compose up -d
-```
-
-Avec `SMTP_HOST=127.0.0.1`, `SMTP_PORT=1025`, `SMTP_SECURE=false` et un
-`SMTP_FROM_EMAIL` dans `.env`, tous les e-mails envoyés par l'API arrivent dans
-la boîte de test : http://localhost:8025.
+Configurez les identifiants SMTP et un expéditeur vérifié dans Brevo, puis
+renseignez les variables `BREVO_*` dans `.env`. Utilisez une clé SMTP, pas la
+clé API. Le relais utilise `smtp-relay.brevo.com` sur le port 587.
 
 En local, les erreurs d'envoi SMTP sont journalisées par l'API sans inclure
 la clé, le code OTP ou l'adresse du destinataire. Le frontend affiche le code

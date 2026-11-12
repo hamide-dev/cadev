@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+﻿import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Brand } from '../../components/Brand';
 import { Icon } from '../../components/Icon';
@@ -15,14 +15,13 @@ export function OAuthOnboarding() {
   const [interests, setInterests] = useState(user.interests);
   const [bio, setBio] = useState(user.bio ?? '');
   const [github, setGithub] = useState(user.githubUrl ?? '');
-  const [codes, setCodes] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!specialty || !level || interests.length === 0 || !codes) {
-      setError('Choisis une spécialité, un niveau, au moins un centre d’intérêt et confirme que tu codes.');
+    if (!specialty || !level || interests.length === 0) {
+      setError('Choisis une spécialité, un niveau et au moins un centre d’intérêt.');
       return;
     }
     setBusy(true);
@@ -91,10 +90,6 @@ export function OAuthOnboarding() {
             ))}
           </div>
         </fieldset>
-        <label className="check">
-          <input type="checkbox" checked={codes} onChange={(event) => setCodes(event.target.checked)} />
-          Je développe, ou j’apprends à développer.
-        </label>
         <button type="submit" className="btn btn-primary btn-block" disabled={busy}>
           {busy ? <span className="spinner" /> : 'Terminer mon inscription'}
         </button>

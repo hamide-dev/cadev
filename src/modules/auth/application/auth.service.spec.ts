@@ -104,7 +104,7 @@ describe('AuthService', () => {
     expect(response).toMatchObject({
       message: 'A verification code has been sent to your email address.',
       email: 'dev@example.test',
-      expiresIn: 600,
+      expiresIn: 240,
     });
     expect(smtpEmail.sendVerificationCode).toHaveBeenCalledWith(
       'dev@example.test',
@@ -340,7 +340,7 @@ describe('AuthService', () => {
       testingModule.get(AuthService).requestLoginCode({
         email: user.email,
       }),
-    ).resolves.toMatchObject({ expiresIn: 600 });
+    ).resolves.toMatchObject({ expiresIn: 240 });
     expect(emailVerifications.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         purpose: 'login',
