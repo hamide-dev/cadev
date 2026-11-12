@@ -33,6 +33,15 @@ réactions autres que les likes, accusés de lecture, notes vocales et recherche
 
 ## Principes de transport
 
+- Les requêtes HTTP sous `/api/v1` et le handshake Socket.IO exigent l'en-tête
+  `x-api-key` (pour Socket.IO : champ `auth.apiKey`). Le client web reçoit la
+  valeur depuis `VITE_API_KEY`, qui doit correspondre à `FRONTEND_API_KEY` du
+  backend. OAuth et les contrôles de disponibilité sont exemptés. Cette clé est
+  visible dans le navigateur ; la limite de débit par IP est la protection
+  contre l'abus.
+- Le backend limite les requêtes HTTP à 100 par minute et par adresse IP. Dans
+  Docker, il fait confiance à un seul proxy (Nginx) pour retrouver l'adresse
+  cliente.
 - Les opérations de profil, publications, fil, commentaires, réactions,
   abonnements, favoris, projets, recherche et notifications utilisent HTTP
   JSON.

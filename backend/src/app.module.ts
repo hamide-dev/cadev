@@ -15,6 +15,7 @@ import { MediaModule } from './modules/media/media.module.js';
 import { ProjectsModule } from './modules/projects/projects.module.js';
 import { GitHubPreviewModule } from './modules/github-preview/github-preview.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
+import { FrontendApiKeyGuard } from './security/frontend-api-key.guard.js';
 
 @Module({
   imports: [
@@ -35,6 +36,10 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     NotificationsModule,
   ],
   controllers: [AppController],
-  providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
+  providers: [
+    AppService,
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: FrontendApiKeyGuard },
+  ],
 })
 export class AppModule {}

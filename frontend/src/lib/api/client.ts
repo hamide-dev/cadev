@@ -14,6 +14,7 @@ export class ApiError extends Error {
 
 // Messages lisibles par un humain, par code métier ou statut HTTP.
 const MESSAGES: Record<string, string> = {
+  API_KEY_INVALID: "La clé d'application du frontend ne correspond pas à celle du serveur.",
   INVALID_CREDENTIALS: 'E-mail ou mot de passe incorrect.',
   INVALID_VERIFICATION_CODE: 'Ce code ne correspond pas ou a expiré. Vérifie-le ou demande-en un nouveau.',
   VERIFICATION_ATTEMPTS_EXCEEDED: 'Trop de tentatives. Demande un nouveau code.',
@@ -82,6 +83,9 @@ export async function request<T>(method: string, path: string, body?: unknown): 
       method,
       cache: 'no-store',
       headers: {
+        ...(import.meta.env.VITE_API_KEY
+          ? { 'x-api-key': import.meta.env.VITE_API_KEY }
+          : {}),
         ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },

@@ -2,11 +2,12 @@
 
 Application web React (Vite + TypeScript) du réseau social Hello World. Elle est
 conçue mobile first d'après les maquettes Figma et branchée sur l'API NestJS du
-dossier parent.
+dossier frère `backend/`.
 
 ## Lancer en local
 
-Le back doit tourner sur `http://localhost:3000` (voir le README racine).
+L'API doit tourner sur `http://localhost:3000` (voir
+[`../backend/README.md`](../backend/README.md)).
 
 ```powershell
 cd frontend
@@ -15,8 +16,14 @@ Copy-Item .env.example .env   # facultatif, l'URL par défaut est http://localho
 npm run dev                   # http://localhost:3001
 ```
 
-Le port 3001 est celui attendu par `CORS_ORIGINS` dans le `.env` du back. Il est
+Le port 3001 est celui attendu par `CORS_ORIGINS` dans `backend/.env`. Il est
 aussi vérifié par la gateway Socket.IO.
+
+## Image Docker
+
+Le Dockerfile construit l'application Vite puis la sert avec Nginx. Dans la
+stack Compose racine, Nginx relaie `/api/` et Socket.IO vers le backend, ce qui
+permet de servir les deux applications depuis la même origine.
 
 ## Organisation
 

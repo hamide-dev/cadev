@@ -131,40 +131,39 @@ de diffusion ne réimplémente aucune règle métier.
 ## 6. Arborescence cible
 
 ```text
-src/
-  app.module.ts
-  main.ts
-  common/
-    auth/
-    errors/
-    pagination/
-    observability/
-  config/
-  database/
-    migrations/
-    database.module.ts
-  modules/
-    auth/
-      application/ domain/ infrastructure/ presentation/
-    users/
-      application/ domain/ infrastructure/ presentation/
-    posts/
-      application/ domain/ infrastructure/ presentation/
-    comments/
-      application/ domain/ infrastructure/ presentation/
-    reactions/
-    follows/
-    bookmarks/
-    projects/
-    messaging/
-      application/ domain/ infrastructure/ presentation/
-      presentation/events/
-    notifications/
-    media/
-    github-preview/
-    search/
-    mail/
-test/
+.git/
+backend/
+  src/
+    app.module.ts
+    main.ts
+    common/
+      auth/
+      errors/
+      pagination/
+      observability/
+    config/
+    database/
+      migrations/
+      database.module.ts
+    modules/
+      auth/
+        application/ domain/ infrastructure/ presentation/
+      users/
+        application/ domain/ infrastructure/ presentation/
+      posts/
+        application/ domain/ infrastructure/ presentation/
+      comments/
+        application/ domain/ infrastructure/ presentation/
+      projects/
+      messaging/
+        application/ domain/ infrastructure/ presentation/
+        presentation/events/
+      notifications/
+      media/
+      github-preview/
+  test/
+frontend/
+  src/
 docs/
 ```
 

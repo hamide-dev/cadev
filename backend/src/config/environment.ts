@@ -4,6 +4,8 @@ export interface Environment {
   DATABASE_URL: string;
   DATABASE_SSL: boolean;
   JWT_ACCESS_SECRET: string;
+  FRONTEND_API_KEY: string;
+  TRUST_PROXY_HOPS?: number;
   CORS_ORIGINS: string;
   CLOUDINARY_CLOUD_NAME?: string;
   CLOUDINARY_API_KEY?: string;
@@ -78,6 +80,8 @@ export function validateEnvironment(raw: RawEnvironment): Environment {
   const databaseSsl = databaseSslValue === 'true' || databaseSslValue === true;
 
   const accessSecret = validateSecret(raw, 'JWT_ACCESS_SECRET');
+  const frontendApiKey = validateSecret(raw, 'FRONTEND_API_KEY');
+  const trustProxyHops = optionalInteger(raw, 'TRUST_PROXY_HOPS', 0, 10);
   const cloudinaryValues = [
     raw.CLOUDINARY_CLOUD_NAME,
     raw.CLOUDINARY_API_KEY,
@@ -159,6 +163,8 @@ export function validateEnvironment(raw: RawEnvironment): Environment {
     DATABASE_URL: databaseUrl,
     DATABASE_SSL: databaseSsl,
     JWT_ACCESS_SECRET: accessSecret,
+    FRONTEND_API_KEY: frontendApiKey,
+    ...(trustProxyHops === undefined ? {} : { TRUST_PROXY_HOPS: trustProxyHops }),
     CORS_ORIGINS: normalizedOrigins.join(','),
     ...(cloudinaryCloudName
       ? {
@@ -249,6 +255,21 @@ function optionalString(raw: RawEnvironment, key: string): string | undefined {
   return typeof value === 'string' && value.trim().length > 0
     ? value.trim()
     : undefined;
+}
+
+function optionalInteger(
+  raw: RawEnvironment,
+  key: string,
+  min: number,
+  max: number,
+): number | undefined {
+  const value = raw[key];
+  if (value === undefined || value === '') return undefined;
+  const parsed = typeof value === 'number' ? value : Number(value);
+  if (!Number.isInteger(parsed) || parsed < min || parsed > max) {
+    throw new Error(`${key} must be an integer between ${min} and ${max}`);
+  }
+  return parsed;
 }
 
 function validateSecret(raw: RawEnvironment, key: string): string {

@@ -28,6 +28,7 @@ import { CreateConversationDto } from './dto/create-conversation.dto.js';
 import { ConversationIdDto } from './dto/conversation-id.dto.js';
 import { MessageHistoryDto } from './dto/message-history.dto.js';
 import { SendMessageDto } from './dto/send-message.dto.js';
+import { apiKeysMatch } from '../../../security/frontend-api-key.guard.js';
 
 type AuthenticatedSocket = Socket & {
   data: { userId: string; email: string };
@@ -57,6 +58,17 @@ export class MessagingGateway implements OnGatewayInit {
         .map((item) => item.trim());
       if (origin && !allowedOrigins.includes(origin)) {
         next(new Error('ORIGIN_NOT_ALLOWED'));
+        return;
+      }
+      const apiKey = socket.handshake.auth.apiKey;
+      if (
+        typeof apiKey !== 'string' ||
+        !apiKeysMatch(
+          apiKey,
+          this.config.get('FRONTEND_API_KEY', { infer: true }),
+        )
+      ) {
+        next(new Error('API_KEY_INVALID'));
         return;
       }
       const token = socket.handshake.auth.token;

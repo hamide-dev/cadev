@@ -24,7 +24,10 @@ let socket: Socket | null = null;
 
 export function getSocket(): Socket {
   if (!socket) {
-    socket = io(`${API_URL}/messaging`, { auth: { token: getToken() }, transports: ['websocket'] });
+    socket = io(`${API_URL}/messaging`, {
+      auth: { token: getToken(), apiKey: import.meta.env.VITE_API_KEY },
+      transports: ['websocket'],
+    });
   }
   return socket;
 }

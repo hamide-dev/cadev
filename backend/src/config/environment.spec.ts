@@ -6,6 +6,7 @@ const validEnvironment = {
   DATABASE_URL: 'postgresql://user:password@localhost:5432/hello_world',
   DATABASE_SSL: 'false',
   JWT_ACCESS_SECRET: 'a'.repeat(40),
+  FRONTEND_API_KEY: 'b'.repeat(40),
   CORS_ORIGINS: 'http://localhost:3001',
 };
 
