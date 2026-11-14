@@ -34,6 +34,10 @@ Routes disponibles :
 - `GET http://localhost:3000/api/v1/health` — disponibilité PostgreSQL
 - `http://localhost:3000/api/docs` — documentation Swagger
 
+Le backend envoie aussi une requête locale à `/api/v1/` toutes les 14 minutes
+pour maintenir l'activité du service sur les hébergements qui détectent
+l'inactivité à partir des requêtes HTTP.
+
 Parcours disponibles dans cette première tranche :
 
 - `POST /api/v1/auth/register/init`, puis

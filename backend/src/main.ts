@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module.js';
@@ -44,6 +44,27 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, document);
 
-  await app.listen(config.get('PORT', { infer: true }));
+  const port = config.get('PORT', { infer: true });
+  await app.listen(port);
+
+  const logger = new Logger('KeepAlive');
+  const keepAliveUrl = `http://127.0.0.1:${port}/api/v1/`;
+  const keepAliveTimer = setInterval(() => {
+    void fetch(keepAliveUrl, { signal: AbortSignal.timeout(10_000) })
+      .then((response) => {
+        if (!response.ok) {
+          logger.error(
+            `Keep-alive request failed with status ${response.status}`,
+          );
+        }
+      })
+      .catch((error: unknown) => {
+        logger.error(
+          'Keep-alive request failed',
+          error instanceof Error ? error.message : String(error),
+        );
+      });
+  }, 14 * 60 * 1_000);
+  keepAliveTimer.unref();
 }
 await bootstrap();
