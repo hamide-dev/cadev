@@ -109,6 +109,75 @@ export class MediaService {
     return { avatarUrl: cloudAsset.secureUrl };
   }
 
+  createBannerSignature(userId: string): UploadSignature {
+    return this.createSignature(
+      `hello-world/banners/${userId}/${randomUUID()}`,
+      MediaResourceType.IMAGE,
+      'upload',
+      PROFILE_MAX_BYTES,
+      PROFILE_IMAGE_FORMATS,
+    );
+  }
+
+  async confirmBannerUpload(
+    userId: string,
+    publicId: string,
+  ): Promise<{ bannerUrl: string }> {
+    assertPublicIdPrefix(publicId, `hello-world/banners/${userId}/`);
+    const existing = await this.assets.findOneBy({
+      cloudPublicId: publicId,
+    });
+    if (existing) {
+      if (
+        existing.ownerId !== userId ||
+        existing.purpose !== MediaPurpose.BANNER
+      ) {
+        throw new ConflictException({
+          code: 'MEDIA_ASSET_CONFLICT',
+          message: 'This media asset cannot be used as this profile banner.',
+        });
+      }
+      if (!existing.publicUrl) {
+        throw new ConflictException({
+          code: 'MEDIA_ASSET_INVALID',
+          message: 'The profile banner has no public delivery URL.',
+        });
+      }
+      await this.usersService.updateBannerUrl(userId, existing.publicUrl);
+      return { bannerUrl: existing.publicUrl };
+    }
+
+    const cloudAsset = await this.cloudinary.findAsset(
+      publicId,
+      MediaResourceType.IMAGE,
+      'upload',
+    );
+    assertVerifiedAsset(
+      cloudAsset,
+      publicId,
+      MediaResourceType.IMAGE,
+      'upload',
+      PROFILE_IMAGE_FORMATS,
+      PROFILE_MAX_BYTES,
+    );
+    await this.assets.save(
+      this.assets.create({
+        ownerId: userId,
+        purpose: MediaPurpose.BANNER,
+        resourceType: MediaResourceType.IMAGE,
+        cloudPublicId: cloudAsset.publicId,
+        format: cloudAsset.format,
+        bytes: cloudAsset.bytes,
+        publicUrl: cloudAsset.secureUrl,
+        conversationId: null,
+        messageId: null,
+        postId: null,
+      }),
+    );
+    await this.usersService.updateBannerUrl(userId, cloudAsset.secureUrl);
+    return { bannerUrl: cloudAsset.secureUrl };
+  }
+
   async createChatUploadSignature(
     userId: string,
     conversationId: string,

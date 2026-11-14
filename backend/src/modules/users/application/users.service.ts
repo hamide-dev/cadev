@@ -36,6 +36,7 @@ export class UsersService {
       githubId: null,
       bio: null,
       avatarUrl: null,
+      bannerUrl: null,
       githubUrl: null,
       specialty: null,
       experienceLevel: null,
@@ -132,6 +133,7 @@ export class UsersService {
       githubId: input.provider === 'github' ? input.providerId : null,
       bio: null,
       avatarUrl: null,
+      bannerUrl: null,
       githubUrl: null,
       specialty: null,
       experienceLevel: null,
@@ -215,6 +217,10 @@ export class UsersService {
 
   async updateAvatarUrl(id: string, avatarUrl: string): Promise<void> {
     await this.users.update({ id }, { avatarUrl });
+  }
+
+  async updateBannerUrl(id: string, bannerUrl: string): Promise<void> {
+    await this.users.update({ id }, { bannerUrl });
   }
 
   async follow(followerId: string, username: string): Promise<void> {
@@ -326,6 +332,7 @@ export function toPublicUser(
     ...(includeEmail ? { email: user.email } : {}),
     bio: user.bio,
     avatarUrl: user.avatarUrl,
+    bannerUrl: user.bannerUrl,
     githubUrl: user.githubUrl,
     specialty: user.specialty,
     experienceLevel: user.experienceLevel,

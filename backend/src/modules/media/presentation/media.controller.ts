@@ -35,6 +35,23 @@ export class MediaController {
     return this.mediaService.confirmProfileImage(user.id, input.publicId);
   }
 
+  @Post('banner/signature')
+  @ApiOperation({ summary: 'Get a signed Cloudinary profile-banner upload' })
+  createBannerSignature(@CurrentUser() user: AuthUser): UploadSignature {
+    return this.mediaService.createBannerSignature(user.id);
+  }
+
+  @Post('banner/confirm')
+  @ApiOperation({
+    summary: 'Verify a Cloudinary upload and set the profile banner',
+  })
+  confirmBannerUpload(
+    @CurrentUser() user: AuthUser,
+    @Body() input: ConfirmProfileUploadDto,
+  ): Promise<{ bannerUrl: string }> {
+    return this.mediaService.confirmBannerUpload(user.id, input.publicId);
+  }
+
   @Post('posts/signature')
   @ApiOperation({ summary: 'Get a signed Cloudinary post-media upload' })
   createPostSignature(

@@ -1,5 +1,6 @@
 export enum MediaPurpose {
   PROFILE = 'PROFILE',
+  BANNER = 'BANNER',
   CHAT = 'CHAT',
   POST = 'POST',
 }

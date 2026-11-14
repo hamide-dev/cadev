@@ -43,6 +43,9 @@ export class UserEntity {
   avatarUrl!: string | null;
 
   @Column({ type: 'varchar', length: 2048, nullable: true })
+  bannerUrl!: string | null;
+
+  @Column({ type: 'varchar', length: 2048, nullable: true })
   githubUrl!: string | null;
 
   @Column({
