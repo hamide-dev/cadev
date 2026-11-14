@@ -68,7 +68,10 @@ describe('SmtpEmailService using Brevo', () => {
     await expect(
       service.sendVerificationCode('user@example.test', '1234'),
     ).rejects.toMatchObject({
-      response: { code: 'EMAIL_PROVIDER_NOT_CONFIGURED' },
+      response: {
+        code: 'EMAIL_PROVIDER_NOT_CONFIGURED',
+        message: "Impossible d'envoyer l'e-mail pour le moment. Réessaie plus tard.",
+      },
     });
   });
 
@@ -79,7 +82,10 @@ describe('SmtpEmailService using Brevo', () => {
     await expect(
       service.sendVerificationCode('user@example.test', '1234'),
     ).rejects.toMatchObject({
-      response: { code: 'EMAIL_PROVIDER_UNAVAILABLE' },
+      response: {
+        code: 'EMAIL_PROVIDER_UNAVAILABLE',
+        message: "Impossible d'envoyer l'e-mail pour le moment. Réessaie plus tard.",
+      },
     });
     await expect(
       service.sendVerificationCode('user@example.test', '1234'),

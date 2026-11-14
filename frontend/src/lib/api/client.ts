@@ -2,6 +2,8 @@
 export const BASE = `${API_URL}/api/v1`;
 export const FRONTEND_API_KEY = (import.meta.env.VITE_API_KEY as string | undefined) ?? 'b4f7b88eff2a716ce8c2b0f045c38a37c00cc6959a2df30f970f9c5a2e487d9b';
 const LEGACY_TOKEN_KEY = 'hw.token';
+const EMAIL_DELIVERY_ERROR =
+  "Impossible d'envoyer l'e-mail pour le moment. Réessaie plus tard.";
 
 export class ApiError extends Error {
   status: number;
@@ -22,12 +24,12 @@ const MESSAGES: Record<string, string> = {
   VERIFICATION_ATTEMPTS_EXCEEDED: 'Trop de tentatives. Demande un nouveau code.',
   EMAIL_ALREADY_VERIFIED: 'Cette adresse est déjà vérifiée, tu peux te connecter.',
   EMAIL_VERIFICATION_REQUIRED: "Ton adresse n'est pas encore vérifiée. Termine l'inscription avec le code reçu.",
-  EMAIL_PROVIDER_NOT_CONFIGURED: "L'envoi d'e-mails n'est pas encore configuré sur ce serveur. Connecte-toi avec ton mot de passe.",
-  EMAIL_PROVIDER_AUTH_FAILED: "Brevo a refusé les identifiants SMTP. Vérifie BREVO_SMTP_LOGIN et BREVO_SMTP_KEY.",
-  EMAIL_PROVIDER_IP_NOT_AUTHORIZED: "Le serveur SMTP n'autorise pas cette machine. Vérifie sa liste d'accès réseau.",
-  EMAIL_PROVIDER_UNAVAILABLE: "Impossible de joindre le serveur SMTP. Vérifie son adresse, son port et son état.",
-  EMAIL_PROVIDER_RATE_LIMITED: "Le serveur SMTP limite temporairement l'envoi. Patiente avant de redemander un code.",
-  EMAIL_PROVIDER_SEND_FAILED: "Le serveur SMTP a refusé l'envoi. Vérifie l'adresse expéditrice autorisée.",
+  EMAIL_PROVIDER_NOT_CONFIGURED: EMAIL_DELIVERY_ERROR,
+  EMAIL_PROVIDER_AUTH_FAILED: EMAIL_DELIVERY_ERROR,
+  EMAIL_PROVIDER_IP_NOT_AUTHORIZED: EMAIL_DELIVERY_ERROR,
+  EMAIL_PROVIDER_UNAVAILABLE: EMAIL_DELIVERY_ERROR,
+  EMAIL_PROVIDER_RATE_LIMITED: EMAIL_DELIVERY_ERROR,
+  EMAIL_PROVIDER_SEND_FAILED: EMAIL_DELIVERY_ERROR,
   EMAIL_ALREADY_EXISTS: 'Cet e-mail est déjà associé à un compte.',
   USERNAME_ALREADY_EXISTS: 'Ce pseudo est déjà pris.',
   REGISTRATION_CONFLICT: 'Cet e-mail ou ce pseudo est déjà associé à un compte.',
@@ -127,7 +129,7 @@ export async function request<T>(method: string, path: string, body?: unknown): 
     throw new ApiError(
       response.status,
       code,
-      serverMsg ?? MESSAGES[code] ?? BY_STATUS[response.status] ?? 'Une erreur est survenue. Réessaie dans un instant.',
+      MESSAGES[code] ?? serverMsg ?? BY_STATUS[response.status] ?? 'Une erreur est survenue. Réessaie dans un instant.',
     );
   }
   return data as T;

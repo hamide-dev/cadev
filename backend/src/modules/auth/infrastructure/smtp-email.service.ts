@@ -8,6 +8,9 @@ import * as nodemailer from 'nodemailer';
 import type { Environment } from '../../../config/environment.js';
 import type { EmailVerificationPurpose } from './email-verification.entity.js';
 
+const PUBLIC_EMAIL_ERROR =
+  "Impossible d'envoyer l'e-mail pour le moment. Réessaie plus tard.";
+
 // Brevo transactional email relay (SMTP submission on port 587).
 @Injectable()
 export class SmtpEmailService {
@@ -24,9 +27,10 @@ export class SmtpEmailService {
     const key = this.config.get('BREVO_SMTP_KEY');
     const fromEmail = this.config.get('BREVO_FROM_EMAIL');
     if (!user || !key || !fromEmail) {
+      this.logger.error('Brevo SMTP is not configured.');
       throw new ServiceUnavailableException({
         code: 'EMAIL_PROVIDER_NOT_CONFIGURED',
-        message: 'Brevo SMTP credentials and sender must be configured before sending email.',
+        message: PUBLIC_EMAIL_ERROR,
       });
     }
     const transport = nodemailer.createTransport({
@@ -86,7 +90,7 @@ export class SmtpEmailService {
       });
     } catch (error) {
       this.logger.error(
-        `SMTP rejected ${purpose} verification email (${error instanceof Error ? error.message : 'unknown error'}).`,
+        `SMTP delivery failed for ${purpose} (${error instanceof Error ? error.message : 'unknown error'}).`,
       );
       const responseCode =
         typeof error === 'object' && error !== null && 'responseCode' in error
@@ -95,14 +99,13 @@ export class SmtpEmailService {
       if (responseCode === 535) {
         throw new ServiceUnavailableException({
           code: 'EMAIL_PROVIDER_AUTH_FAILED',
-          message: 'Brevo rejected the SMTP login or SMTP key.',
+          message: PUBLIC_EMAIL_ERROR,
         });
       }
       throw new ServiceUnavailableException(
         {
           code: 'EMAIL_PROVIDER_UNAVAILABLE',
-          message:
-            'Could not reach Brevo SMTP. Check BREVO_SMTP_LOGIN, BREVO_SMTP_KEY and outbound SMTP access.',
+          message: PUBLIC_EMAIL_ERROR,
         },
         { cause: error },
       );
