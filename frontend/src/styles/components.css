@@ -13,6 +13,8 @@
 }
 .topbar h1 { font-size: 22px; font-weight: 700; line-height: 1.2; }
 .topbar .sub { font-size: 12px; color: var(--text-3); }
+/* Centré sur l'écran, pas entre l'avatar et « Publier » qui n'ont pas la même largeur. */
+.topbar-logo { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; }
 
 .brand { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-3); font: 600 20px var(--mono); text-decoration: none; }
 
