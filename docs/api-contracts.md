@@ -16,6 +16,7 @@ Les réponses exposent uniquement les champs explicitement autorisés.
 | HTTP | Médias de publication : `POST /api/v1/media/posts/signature`, `POST /api/v1/media/posts/confirm` |
 | HTTP | `GET/POST /api/v1/posts/:postId/comments`, `PATCH/DELETE /api/v1/posts/comments/:commentId` |
 | HTTP | Questions : `GET/POST /api/v1/posts/:postId/answers`, vote utile et suivi de question |
+| HTTP | Notifications : `GET /api/v1/notifications`, configuration et abonnement Web Push |
 | HTTP | Aperçu GitHub public : `GET /api/v1/github-preview?url=...` |
 | Socket.IO `/messaging` | `conversation:create`, `conversation:list`, `conversation:join`, `conversation:leave`, `conversation:read`, `message:history`, `message:send`, `typing:start`, `typing:stop` |
 
@@ -27,7 +28,7 @@ mentions, épinglage et flux paginés. Les inscriptions locales envoient un OTP
 à 4 chiffres via le relais SMTP Brevo ; OAuth Google/GitHub accepte uniquement des adresses
 vérifiées par le fournisseur.
 
-Non encore livrés : projets/tâches/contributions, salons projet, notifications, favoris,
+Non encore livrés : projets/tâches/contributions, salons projet, favoris,
 réactions autres que les likes, accusés de lecture, notes vocales et recherche.
 
 ## Principes de transport
@@ -144,11 +145,19 @@ pas renvoyé dans les réponses JSON.
 | `POST /projects`, `GET /projects`, `GET /projects/:id`, `PATCH /projects/:id` | Auth. selon opération | filtres/DTO projet → DTO projet | Rôles Owner/Maintainer/Contributor. |
 | `GET /projects/:id/tasks`, `POST /projects/:id/tasks` | Lecture publique ou membre / rôle autorisé | filtres/DTO tâche → page/tâche | Contrôles de droits par projet. |
 | `POST /projects/:id/tasks/:taskId/contributions` | Authentifié | proposition → contribution | Unicité/idempotence à définir ; droits et tâche vérifiés. |
-| `GET /notifications`, `GET /notifications/unread-count` | Authentifié | curseur / aucun corps → page/compteur | Uniquement les notifications du destinataire. |
-| `PATCH /notifications/:id/read`, `POST /notifications/read` | Authentifié | id(s) → résultat | Contrôle destinataire ; lecture idempotente. |
+| `GET /notifications` | Authentifié | → les 50 notifications récentes | Disponible ; uniquement les notifications du destinataire. |
+| `GET /notifications/push/config` | Authentifié | → `{ configured, publicKey }` | Disponible ; la clé publique est exposée uniquement si le serveur Web Push est configuré. |
+| `POST /notifications/push-subscription`, `DELETE /notifications/push-subscription` | Authentifié | abonnement navigateur / endpoint → état | Disponible ; enregistrement par utilisateur, endpoint Chrome FCM HTTPS seulement ; suppression limitée à l'utilisateur authentifié. |
 | `GET /search` | Public ou authentifié | `q`, `type`, filtres, curseur → résultats | Liste blanche de types et filtres ; limites. |
 | `GET /github-preview?url=...` | Public ou authentifié | URL GitHub → aperçu mis en cache | Disponible ; hôte et format strictement validés, TTL d'une heure et jamais de fetch libre. |
 | `GET /health` | Selon déploiement | aucun → état minimal | Ne divulgue aucune configuration interne. |
+
+Web Push nécessite `WEB_PUSH_PUBLIC_KEY`, `WEB_PUSH_PRIVATE_KEY` et
+`WEB_PUSH_SUBJECT` côté backend. Générer la paire VAPID avec
+`npx web-push generate-vapid-keys` depuis `backend/`; ne jamais exposer la clé
+privée au frontend. Le navigateur ne demande l'autorisation qu'après un clic
+explicite. Sur iPhone/iPad, le site doit être ajouté à l'écran d'accueil
+(iOS 16.4+).
 
 Le serveur expose également `GET /api/v1/`, `GET /api/v1/health` et Swagger
 sur `/api/docs`. Les routes non identifiées comme disponibles ci-dessus restent

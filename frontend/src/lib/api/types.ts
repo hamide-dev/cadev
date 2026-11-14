@@ -49,6 +49,19 @@ export interface Notification {
   createdAt: string;
 }
 
+export interface PushConfiguration {
+  configured: boolean;
+  publicKey: string | null;
+}
+
+export interface PushSubscriptionInput {
+  endpoint: string;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+}
+
 export interface Post {
   id: string;
   type: PostType;

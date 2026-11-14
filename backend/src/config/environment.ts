@@ -19,6 +19,9 @@ export interface Environment {
   GITHUB_CLIENT_ID?: string;
   GITHUB_CLIENT_SECRET?: string;
   GITHUB_CALLBACK_URL?: string;
+  WEB_PUSH_PUBLIC_KEY?: string;
+  WEB_PUSH_PRIVATE_KEY?: string;
+  WEB_PUSH_SUBJECT?: string;
 }
 
 type RawEnvironment = Record<string, unknown>;
@@ -126,6 +129,16 @@ export function validateEnvironment(raw: RawEnvironment): Environment {
   );
   if (githubValues[2])
     validateCallbackUrl(githubValues[2], 'GITHUB_CALLBACK_URL');
+  const webPushValues = [
+    optionalString(raw, 'WEB_PUSH_PUBLIC_KEY'),
+    optionalString(raw, 'WEB_PUSH_PRIVATE_KEY'),
+    optionalString(raw, 'WEB_PUSH_SUBJECT'),
+  ];
+  assertOptionalGroup(
+    webPushValues,
+    'WEB_PUSH_PUBLIC_KEY, WEB_PUSH_PRIVATE_KEY, and WEB_PUSH_SUBJECT must be configured together',
+  );
+  if (webPushValues[2]) validateWebPushSubject(webPushValues[2]);
 
   const corsOrigins = raw.CORS_ORIGINS ?? 'http://localhost:3001';
   if (typeof corsOrigins !== 'string' || corsOrigins.trim().length === 0) {
@@ -187,6 +200,13 @@ export function validateEnvironment(raw: RawEnvironment): Environment {
           GITHUB_CALLBACK_URL: githubValues[2],
         }
       : {}),
+    ...(webPushValues[0]
+      ? {
+          WEB_PUSH_PUBLIC_KEY: webPushValues[0],
+          WEB_PUSH_PRIVATE_KEY: webPushValues[1],
+          WEB_PUSH_SUBJECT: webPushValues[2],
+        }
+      : {}),
   };
 }
 
@@ -237,6 +257,17 @@ function validateCallbackUrl(value: string, key: string): void {
   ) {
     throw new Error(`${key} must use HTTPS (HTTP is allowed for localhost)`);
   }
+}
+
+function validateWebPushSubject(value: string): void {
+  if (/^mailto:[^\s@]+@[^\s@]+$/.test(value)) return;
+  try {
+    const url = new URL(value);
+    if (url.protocol === 'https:' && !url.username && !url.password) return;
+  } catch {
+    // Report the same configuration error for malformed URLs and unsupported schemes.
+  }
+  throw new Error('WEB_PUSH_SUBJECT must be a mailto: address or HTTPS URL');
 }
 
 function requiredString(raw: RawEnvironment, key: string): string {

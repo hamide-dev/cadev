@@ -71,4 +71,41 @@ describe('validateEnvironment', () => {
       validateEnvironment({ ...validEnvironment, BREVO_API_KEY: 'api-key' }),
     ).toThrow('BREVO_API_KEY and BREVO_FROM_EMAIL must be configured together');
   });
+
+  it('requires all Web Push VAPID settings together', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validEnvironment,
+        WEB_PUSH_PUBLIC_KEY: 'public-key',
+      }),
+    ).toThrow(
+      'WEB_PUSH_PUBLIC_KEY, WEB_PUSH_PRIVATE_KEY, and WEB_PUSH_SUBJECT must be configured together',
+    );
+  });
+
+  it('accepts a complete Web Push VAPID configuration', () => {
+    expect(
+      validateEnvironment({
+        ...validEnvironment,
+        WEB_PUSH_PUBLIC_KEY: 'public-key',
+        WEB_PUSH_PRIVATE_KEY: 'private-key',
+        WEB_PUSH_SUBJECT: 'mailto:notifications@example.test',
+      }),
+    ).toMatchObject({
+      WEB_PUSH_PUBLIC_KEY: 'public-key',
+      WEB_PUSH_PRIVATE_KEY: 'private-key',
+      WEB_PUSH_SUBJECT: 'mailto:notifications@example.test',
+    });
+  });
+
+  it('rejects an invalid Web Push subject', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validEnvironment,
+        WEB_PUSH_PUBLIC_KEY: 'public-key',
+        WEB_PUSH_PRIVATE_KEY: 'private-key',
+        WEB_PUSH_SUBJECT: 'http://example.test',
+      }),
+    ).toThrow('WEB_PUSH_SUBJECT must be a mailto: address or HTTPS URL');
+  });
 });

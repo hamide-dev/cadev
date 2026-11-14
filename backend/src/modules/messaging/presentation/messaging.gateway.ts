@@ -6,7 +6,7 @@
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { UsePipes, ValidationPipe } from '@nestjs/common';
+import { Logger, UsePipes, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import type { Server, Socket } from 'socket.io';
@@ -29,6 +29,7 @@ import { ConversationIdDto } from './dto/conversation-id.dto.js';
 import { MessageHistoryDto } from './dto/message-history.dto.js';
 import { SendMessageDto } from './dto/send-message.dto.js';
 import { apiKeysMatch } from '../../../security/frontend-api-key.guard.js';
+import { PushNotificationsService } from '../../notifications/application/push-notifications.service.js';
 
 type AuthenticatedSocket = Socket & {
   data: { userId: string; email: string };
@@ -39,6 +40,8 @@ type AuthenticatedSocket = Socket & {
   cors: { origin: true, credentials: true },
 })
 export class MessagingGateway implements OnGatewayInit {
+  private readonly logger = new Logger(MessagingGateway.name);
+
   @WebSocketServer()
   private server!: Server;
 
@@ -47,6 +50,7 @@ export class MessagingGateway implements OnGatewayInit {
     private readonly mediaService: MediaService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService<Environment, true>,
+    private readonly pushNotifications: PushNotificationsService,
   ) {}
 
   afterInit(server: Server): void {
@@ -245,6 +249,16 @@ export class MessagingGateway implements OnGatewayInit {
         this.server.to(`user:${member.id}`).emit('message:unread', {
           conversationId: input.conversationId,
         });
+        void this.pushNotifications
+          .sendToUser(member.id, {
+            title: 'Nouveau message',
+            body: `@${message.sender.username} vous a envoyé un message.`,
+            url: `/messages/${input.conversationId}`,
+          })
+          .catch((error: unknown) => {
+            const name = error instanceof Error ? error.name : 'unknown error';
+            this.logger.error(`Could not send message push notification: ${name}.`);
+          });
       }
     }
     return message;

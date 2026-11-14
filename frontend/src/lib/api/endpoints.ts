@@ -1,4 +1,4 @@
-﻿import type { AuthResponse, Comment, Contribution, Media, Notification, Page, Post, PostType, Project, RepoPreview, Task, UploadSignature, User, UserPage } from './types';
+import type { AuthResponse, Comment, Contribution, Media, Notification, Page, Post, PostType, Project, PushConfiguration, PushSubscriptionInput, RepoPreview, Task, UploadSignature, User, UserPage } from './types';
 import { BASE, qs, request } from './client';
 export const api = {
   // Auth — nouveau flux en deux phases
@@ -84,4 +84,9 @@ export const api = {
   confirmPost: (publicId: string, resourceType: 'image' | 'video') =>
     request<Media>('POST', '/media/posts/confirm', { publicId, resourceType }),
   notifications: () => request<Notification[]>('GET', '/notifications'),
+  pushConfiguration: () => request<PushConfiguration>('GET', '/notifications/push/config'),
+  savePushSubscription: (input: PushSubscriptionInput) =>
+    request<{ subscribed: true }>('POST', '/notifications/push-subscription', input),
+  removePushSubscription: (endpoint: string) =>
+    request<{ unsubscribed: true }>('DELETE', '/notifications/push-subscription', { endpoint }),
 };

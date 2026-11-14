@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SecurityModule } from '../../security/security.module.js';
 import { MediaModule } from '../media/media.module.js';
+import { NotificationsModule } from '../notifications/notifications.module.js';
 import { UserEntity } from '../users/infrastructure/user.entity.js';
 import { MessagingService } from './application/messaging.service.js';
 import {
@@ -21,6 +22,7 @@ import { MessagingGateway } from './presentation/messaging.gateway.js';
     ]),
     SecurityModule,
     MediaModule,
+    NotificationsModule,
   ],
   providers: [MessagingService, MessagingGateway],
 })

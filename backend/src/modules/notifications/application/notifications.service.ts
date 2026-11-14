@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import type { PublicUser } from '../../users/domain/user.types.js';
 import { UsersService } from '../../users/application/users.service.js';
 import { NotificationEntity, NotificationType } from '../infrastructure/notification.entity.js';
+import { PushNotificationsService } from './push-notifications.service.js';
 
 export interface PublicNotification {
   id: string;
@@ -31,7 +32,22 @@ function getNotificationMessage(
     case NotificationType.MENTION:
       return `${actor} vous a mentionné`;
     default:
-      throw new Error(`Unsupported notification type: ${type}`);
+      throw new Error(`Unsupported notification type: ${String(type)}`);
+  }
+}
+
+function getPushMessage(type: NotificationType): string {
+  switch (type) {
+    case NotificationType.LIKE:
+      return 'Quelqu’un a aimé votre publication.';
+    case NotificationType.COMMENT:
+      return 'Nouveau commentaire sur votre publication.';
+    case NotificationType.REPLY:
+      return 'Nouvelle réponse à votre commentaire.';
+    case NotificationType.MENTION:
+      return 'Vous avez été mentionné.';
+    default:
+      throw new Error(`Unsupported notification type: ${String(type)}`);
   }
 }
 
@@ -41,6 +57,7 @@ export class NotificationsService {
     @InjectRepository(NotificationEntity)
     private readonly notifications: Repository<NotificationEntity>,
     private readonly users: UsersService,
+    private readonly pushNotifications: PushNotificationsService,
   ) {}
 
   async notifyMentions(
@@ -60,6 +77,15 @@ export class NotificationsService {
           postId,
           commentId,
           readAt: null,
+        }),
+      ),
+    );
+    await Promise.all(
+      recipients.map((recipientId) =>
+        this.pushNotifications.sendToUser(recipientId, {
+          title: 'Hello World',
+          body: getPushMessage(NotificationType.MENTION),
+          url: postId ? `/post/${postId}` : '/notifications',
         }),
       ),
     );
@@ -83,6 +109,11 @@ export class NotificationsService {
         readAt: null,
       }),
     );
+    await this.pushNotifications.sendToUser(recipientId, {
+      title: 'Hello World',
+      body: getPushMessage(type),
+      url: postId ? `/post/${postId}` : '/notifications',
+    });
   }
 
   async listForUser(userId: string): Promise<PublicNotification[]> {
