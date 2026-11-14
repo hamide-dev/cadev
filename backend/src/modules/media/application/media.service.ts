@@ -43,110 +43,83 @@ export class MediaService {
   ) {}
 
   createProfileImageSignature(userId: string): UploadSignature {
-    return this.createSignature(
-      `hello-world/profiles/${userId}/${randomUUID()}`,
-      MediaResourceType.IMAGE,
-      'upload',
-      PROFILE_MAX_BYTES,
-      PROFILE_IMAGE_FORMATS,
-    );
+    return this.createProfileFolderSignature(`hello-world/profiles/${userId}`);
+  }
+
+  createBannerImageSignature(userId: string): UploadSignature {
+    return this.createProfileFolderSignature(`hello-world/banners/${userId}`);
   }
 
   async confirmProfileImage(
     userId: string,
     publicId: string,
   ): Promise<{ avatarUrl: string }> {
-    assertPublicIdPrefix(publicId, `hello-world/profiles/${userId}/`);
-    const existing = await this.assets.findOneBy({
-      cloudPublicId: publicId,
-    });
-    if (existing) {
-      if (
-        existing.ownerId !== userId ||
-        existing.purpose !== MediaPurpose.PROFILE
-      ) {
-        throw new ConflictException({
-          code: 'MEDIA_ASSET_CONFLICT',
-          message: 'This media asset cannot be used as this profile image.',
-        });
-      }
-      if (!existing.publicUrl) {
-        throw new ConflictException({
-          code: 'MEDIA_ASSET_INVALID',
-          message: 'The profile image has no public delivery URL.',
-        });
-      }
-      await this.usersService.updateAvatarUrl(userId, existing.publicUrl);
-      return { avatarUrl: existing.publicUrl };
-    }
-    const cloudAsset = await this.cloudinary.findAsset(
+    const avatarUrl = await this.verifyProfileFolderAsset(
+      userId,
       publicId,
-      MediaResourceType.IMAGE,
-      'upload',
+      `hello-world/profiles/${userId}/`,
+      MediaPurpose.PROFILE,
     );
-    assertVerifiedAsset(
-      cloudAsset,
-      publicId,
-      MediaResourceType.IMAGE,
-      'upload',
-      PROFILE_IMAGE_FORMATS,
-      PROFILE_MAX_BYTES,
-    );
-    await this.assets.save(
-      this.assets.create({
-        ownerId: userId,
-        purpose: MediaPurpose.PROFILE,
-        resourceType: MediaResourceType.IMAGE,
-        cloudPublicId: cloudAsset.publicId,
-        format: cloudAsset.format,
-        bytes: cloudAsset.bytes,
-        publicUrl: cloudAsset.secureUrl,
-        conversationId: null,
-        messageId: null,
-      }),
-    );
-    await this.usersService.updateAvatarUrl(userId, cloudAsset.secureUrl);
-    return { avatarUrl: cloudAsset.secureUrl };
+    await this.usersService.updateAvatarUrl(userId, avatarUrl);
+    return { avatarUrl };
   }
 
-  createBannerSignature(userId: string): UploadSignature {
-    return this.createSignature(
-      `hello-world/banners/${userId}/${randomUUID()}`,
-      MediaResourceType.IMAGE,
-      'upload',
-      PROFILE_MAX_BYTES,
-      PROFILE_IMAGE_FORMATS,
-    );
-  }
-
-  async confirmBannerUpload(
+  async confirmBannerImage(
     userId: string,
     publicId: string,
   ): Promise<{ bannerUrl: string }> {
-    assertPublicIdPrefix(publicId, `hello-world/banners/${userId}/`);
+    const bannerUrl = await this.verifyProfileFolderAsset(
+      userId,
+      publicId,
+      `hello-world/banners/${userId}/`,
+      MediaPurpose.BANNER,
+    );
+    await this.usersService.updateBannerUrl(userId, bannerUrl);
+    return { bannerUrl };
+  }
+
+  private createProfileFolderSignature(folder: string): UploadSignature {
+    return this.createSignature(
+      `${folder}/${randomUUID()}`,
+      MediaResourceType.IMAGE,
+      'upload',
+      PROFILE_MAX_BYTES,
+      PROFILE_IMAGE_FORMATS,
+    );
+  }
+
+  // Photo de profil et bannière : même vérification, seul le dossier change.
+  // Le préfixe du dossier empêche de réutiliser une photo comme bannière et inversement.
+  private async verifyProfileFolderAsset(
+    userId: string,
+    publicId: string,
+    prefix: string,
+    purpose: MediaPurpose,
+  ): Promise<string> {
+    const assetName =
+      purpose === MediaPurpose.BANNER ? 'profile banner' : 'profile image';
+    assertPublicIdPrefix(publicId, prefix);
     const existing = await this.assets.findOneBy({
       cloudPublicId: publicId,
     });
     if (existing) {
       if (
         existing.ownerId !== userId ||
-        existing.purpose !== MediaPurpose.BANNER
+        existing.purpose !== purpose
       ) {
         throw new ConflictException({
           code: 'MEDIA_ASSET_CONFLICT',
-          message: 'This media asset cannot be used as this profile banner.',
+          message: `This media asset cannot be used as this ${assetName}.`,
         });
       }
       if (!existing.publicUrl) {
         throw new ConflictException({
           code: 'MEDIA_ASSET_INVALID',
-          message: 'The profile banner has no public delivery URL.',
+          message: `The ${assetName} has no public delivery URL.`,
         });
       }
-      await this.usersService.updateBannerUrl(userId, existing.publicUrl);
-      return { bannerUrl: existing.publicUrl };
+      return existing.publicUrl;
     }
-
     const cloudAsset = await this.cloudinary.findAsset(
       publicId,
       MediaResourceType.IMAGE,
@@ -163,7 +136,7 @@ export class MediaService {
     await this.assets.save(
       this.assets.create({
         ownerId: userId,
-        purpose: MediaPurpose.BANNER,
+        purpose,
         resourceType: MediaResourceType.IMAGE,
         cloudPublicId: cloudAsset.publicId,
         format: cloudAsset.format,
@@ -174,8 +147,7 @@ export class MediaService {
         postId: null,
       }),
     );
-    await this.usersService.updateBannerUrl(userId, cloudAsset.secureUrl);
-    return { bannerUrl: cloudAsset.secureUrl };
+    return cloudAsset.secureUrl;
   }
 
   async createChatUploadSignature(

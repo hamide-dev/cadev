@@ -20,10 +20,10 @@ export function Feed() {
         <span className="mobile-only">
           <Avatar user={me} size="s" />
         </span>
-        <div className="grow center mobile-only">
-          <Link to="/feed" aria-label="Hello World, accueil">
+        <div className="grow mobile-only">
+          <span className="topbar-logo">
             <LogoMark size={44} />
-          </Link>
+          </span>
         </div>
         <h1 className="grow desktop-only">Fil d’actualité</h1>
         <Link to="/publish" className="btn btn-primary mobile-only">

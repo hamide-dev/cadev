@@ -157,11 +157,10 @@ describe('MediaService', () => {
     });
     expect(cloudinary.findAsset).not.toHaveBeenCalled();
   });
-
   it('signs banner uploads into a separate Cloudinary folder', async () => {
     const { service, cloudinary } = await createService();
 
-    const signature = service.createBannerSignature(userId);
+    const signature = service.createBannerImageSignature(userId);
 
     expect(signature.publicId).toMatch(
       new RegExp(`^hello-world/banners/${userId}/`),
@@ -171,7 +170,7 @@ describe('MediaService', () => {
     );
   });
 
-  it('verifies banner uploads before assigning the banner URL', async () => {
+  it('verifies banner uploads with their dedicated media purpose', async () => {
     const publicId = `hello-world/banners/${userId}/12345678-1234-4234-8234-123456789abc`;
     const cloudAsset = {
       publicId,
@@ -185,7 +184,7 @@ describe('MediaService', () => {
       cloudinary: { findAsset: vi.fn().mockResolvedValue(cloudAsset) },
     });
 
-    const result = await service.confirmBannerUpload(userId, publicId);
+    const result = await service.confirmBannerImage(userId, publicId);
 
     expect(cloudinary.findAsset).toHaveBeenCalledWith(
       publicId,
@@ -205,13 +204,14 @@ describe('MediaService', () => {
       cloudAsset.secureUrl,
     );
     expect(result).toEqual({ bannerUrl: cloudAsset.secureUrl });
+    expect(users.updateAvatarUrl).not.toHaveBeenCalled();
   });
 
   it('rejects profile-image uploads as banners', async () => {
     const { service, cloudinary } = await createService();
 
     await expect(
-      service.confirmBannerUpload(
+      service.confirmBannerImage(
         userId,
         `hello-world/profiles/${userId}/12345678-1234-4234-8234-123456789abc`,
       ),

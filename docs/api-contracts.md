@@ -130,6 +130,7 @@ pas renvoyé dans les réponses JSON.
 | `GET /posts/:postId`, `PATCH /posts/:postId`, `DELETE /posts/:postId` | Auth. selon opération | DTO de publication → DTO public | Disponible ; auteur/propriétaire vérifié ; type `PostType`. |
 | `PUT/DELETE /posts/:postId/like`, `PUT/DELETE /posts/:postId/pin` | Authentifié | aucun corps → état | Disponible ; likes idempotents ; un post épinglé par auteur. |
 | `POST /media/posts/signature`, `POST /media/posts/confirm` | Authentifié | type média / public ID Cloudinary → média confirmé | Disponible ; uploads image/vidéo vérifiés ; pièces jointes limitées à cinq et attachables une fois. |
+| `POST /media/banner/signature`, `POST /media/banner/confirm` | Authentifié | public ID Cloudinary → `{ bannerUrl }` | Disponible ; image jpg/png/webp de 5 Mo au plus, vérifiée comme la photo de profil ; `bannerUrl` est renvoyé dans le profil public. |
 | `GET /posts/:postId/comments` | Public | commentaires → liste | Disponible en HTTP. |
 | `POST /posts/:postId/comments` | Authentifié | `content`, `parentCommentId?` → commentaire public | Disponible en **HTTP seulement** ; parent doit appartenir au même post. |
 | `GET /posts/:postId/answers` | Public | `sort?=useful\|chronological`, `limit?` → réponses | Disponible ; la publication doit être une question ; tri utile par votes. |

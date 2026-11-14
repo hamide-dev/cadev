@@ -14,9 +14,9 @@ export function NotFound() {
 
   return (
     <main className="screen notfound">
-      <Link to={home.to} className="brand notfound-brand" aria-label="Hello World, accueil">
+      <div className="notfound-brand">
         <Brand />
-      </Link>
+      </div>
 
       <div className="notfound-body">
         <p className="notfound-code mono" aria-hidden="true">404</p>

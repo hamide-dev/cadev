@@ -6,6 +6,7 @@ import { TopBar } from '../../components/TopBar';
 import { api, type Level, type Specialty, uploadToCloudinary } from '../../lib/api';
 import { errorMessage, INTERESTS, LEVELS, SPECIALTIES } from '../../lib/format';
 import { useMe, useSession } from '../../lib/session';
+import { Banner } from './Profile';
 
 export function EditProfile() {
   const me = useMe();
@@ -23,21 +24,28 @@ export function EditProfile() {
   });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [uploading, setUploading] = useState<'avatar' | 'banner' | null>(null);
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => setForm((f) => ({ ...f, [key]: value }));
 
-  const uploadAvatar = async (file: File) => {
-    setUploading(true);
+  const upload = async (kind: 'avatar' | 'banner', file: File) => {
+    setUploading(kind);
     setError(null);
     try {
-      const sig = await api.profileSignature();
-      await uploadToCloudinary(sig, file, 'profile');
-      const { avatarUrl } = await api.confirmProfile(sig.publicId);
-      setUser({ ...me, avatarUrl });
+      if (kind === 'avatar') {
+        const sig = await api.profileSignature();
+        await uploadToCloudinary(sig, file, 'profile');
+        const { avatarUrl } = await api.confirmProfile(sig.publicId);
+        setUser({ ...me, avatarUrl });
+      } else {
+        const sig = await api.bannerSignature();
+        await uploadToCloudinary(sig, file, 'profile');
+        const { bannerUrl } = await api.confirmBanner(sig.publicId);
+        setUser({ ...me, bannerUrl });
+      }
     } catch (err) {
       setError(errorMessage(err));
     } finally {
-      setUploading(false);
+      setUploading(null);
     }
   };
 
@@ -72,12 +80,20 @@ export function EditProfile() {
     <main className="screen">
       <form onSubmit={save} className="stack" noValidate style={{ flex: 1 }}>
         <TopBar back title="Modifier le profil" sub="Retour au profil" right={<button type="button" className="btn btn-ghost" onClick={() => navigate(-1)}>Annuler</button>} />
+        <div className="edit-banner">
+          <Banner user={me} />
+          <label className="btn edit-banner-btn">
+            {uploading === 'banner' ? <span className="spinner" /> : <Icon name="camera" size={18} />}
+            {me.bannerUrl ? 'Changer la bannière' : 'Ajouter une bannière'}
+            <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={uploading !== null} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) upload('banner', f); }} />
+          </label>
+        </div>
         <div className="pad stack">
           <div className="row" style={{ gap: 16 }}>
             <Avatar user={me} size="xl" link={false} />
             <label className="icon-btn bordered" style={{ borderRadius: 10, cursor: 'pointer' }} aria-label="Changer la photo de profil">
-              {uploading ? <span className="spinner" /> : <Icon name="camera" size={20} />}
-              <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={uploading} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) uploadAvatar(f); }} />
+              {uploading === 'avatar' ? <span className="spinner" /> : <Icon name="camera" size={20} />}
+              <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={uploading !== null} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) upload('avatar', f); }} />
             </label>
           </div>
           <div className="field">

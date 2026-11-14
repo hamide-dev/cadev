@@ -38,7 +38,7 @@ export class MediaController {
   @Post('banner/signature')
   @ApiOperation({ summary: 'Get a signed Cloudinary profile-banner upload' })
   createBannerSignature(@CurrentUser() user: AuthUser): UploadSignature {
-    return this.mediaService.createBannerSignature(user.id);
+    return this.mediaService.createBannerImageSignature(user.id);
   }
 
   @Post('banner/confirm')
@@ -49,7 +49,7 @@ export class MediaController {
     @CurrentUser() user: AuthUser,
     @Body() input: ConfirmProfileUploadDto,
   ): Promise<{ bannerUrl: string }> {
-    return this.mediaService.confirmBannerUpload(user.id, input.publicId);
+    return this.mediaService.confirmBannerImage(user.id, input.publicId);
   }
 
   @Post('posts/signature')

@@ -63,10 +63,10 @@ export function Nav() {
 
   return (
     <nav className="nav" aria-label="Navigation principale">
-      <Link to="/feed" className="nav-brand" aria-label="Hello World, accueil">
+      <div className="nav-brand">
         <LogoMark size={36} />
         <span className="nav-text mono">Hello World</span>
-      </Link>
+      </div>
       {NAV.map((item) => (
         <NavLink key={item.to} to={item.to} className="nav-item">
           <Icon name={item.icon} />

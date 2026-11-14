@@ -3,6 +3,7 @@ import { ApiError } from './client';
 import { api } from './endpoints';
 // Doit reprendre exactement les formats signés par le back (media.service.ts),
 // sinon Cloudinary refuse la signature. Le back ne les renvoie pas encore.
+// `profile` sert aussi à la bannière : même liste côté back.
 const FORMATS = { profile: 'jpg,jpeg,png,webp', image: 'jpg,jpeg,png,webp,gif', video: 'mp4,webm,mov' };
 
 export async function uploadToCloudinary(sig: UploadSignature, file: File, formats: keyof typeof FORMATS): Promise<void> {
