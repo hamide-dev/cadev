@@ -25,6 +25,10 @@ Le Dockerfile construit l'application Vite puis la sert avec Nginx. Dans la
 stack Compose racine, Nginx relaie `/api/` et Socket.IO vers le backend, ce qui
 permet de servir les deux applications depuis la même origine.
 
+Pour un déploiement Vercel, configure le dossier racine du projet sur
+`frontend/`. La règle `vercel.json` renvoie les routes de l'application vers
+`index.html`, afin que React Router puisse notamment traiter `/oauth/callback`.
+
 ## Organisation
 
 Le code est rangé par fonctionnalité. Un écran vit avec ses sous-composants,
