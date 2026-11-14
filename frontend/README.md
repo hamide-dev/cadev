@@ -27,7 +27,12 @@ permet de servir les deux applications depuis la même origine.
 
 Pour un déploiement Vercel, configure le dossier racine du projet sur
 `frontend/`. La règle `vercel.json` renvoie les routes de l'application vers
-`index.html`, afin que React Router puisse notamment traiter `/oauth/callback`.
+`index.html` pour les routes React et relaie `/api/v1/*` vers le backend Render.
+Supprime `VITE_API_URL` des variables Vercel afin que les appels HTTP restent
+sur l'origine Vercel (les cookies de session OAuth sont alors de première
+partie), et définis `VITE_SOCKET_URL` sur l'URL Render du backend pour Socket.IO.
+Configure `GOOGLE_CALLBACK_URL` côté backend et l'URI autorisée dans Google sur
+`https://cadev-nine.vercel.app/api/v1/auth/google/callback`.
 
 ## Organisation
 

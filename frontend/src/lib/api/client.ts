@@ -1,4 +1,6 @@
-﻿export const API_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:3000').replace(/\/$/, '');
+const defaultApiUrl = import.meta.env.DEV ? 'http://localhost:3000' : '';
+export const API_URL = (import.meta.env.VITE_API_URL ?? defaultApiUrl).replace(/\/$/, '');
+export const SOCKET_URL = (import.meta.env.VITE_SOCKET_URL ?? API_URL).replace(/\/$/, '');
 export const BASE = `${API_URL}/api/v1`;
 export const FRONTEND_API_KEY = (import.meta.env.VITE_API_KEY as string | undefined) ?? 'b4f7b88eff2a716ce8c2b0f045c38a37c00cc6959a2df30f970f9c5a2e487d9b';
 const LEGACY_TOKEN_KEY = 'hw.token';

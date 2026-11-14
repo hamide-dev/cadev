@@ -1,6 +1,6 @@
 ﻿import { io, type Socket } from 'socket.io-client';
 import type { Author } from './api';
-import { API_URL, FRONTEND_API_KEY, request } from './api/client';
+import { FRONTEND_API_KEY, request, SOCKET_URL } from './api/client';
 
 // Contrat Socket.IO du namespace /messaging (docs/api-contracts.md du back).
 export interface Conversation {
@@ -26,7 +26,7 @@ let socket: Socket | null = null;
 
 export function getSocket(): Socket {
   if (!socket) {
-    socket = io(`${API_URL}/messaging`, {
+    socket = io(`${SOCKET_URL}/messaging`, {
       auth: (callback) => {
         void request('GET', '/users/me')
           .catch(() => undefined)
