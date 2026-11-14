@@ -9,7 +9,7 @@ import { AuthSessionService } from './application/auth-session.service.js';
 import { EmailVerificationEntity } from './infrastructure/email-verification.entity.js';
 import { PendingRegistrationEntity } from './infrastructure/pending-registration.entity.js';
 import { RefreshSessionEntity } from './infrastructure/refresh-session.entity.js';
-import { SmtpEmailService } from './infrastructure/smtp-email.service.js';
+import { BrevoEmailService } from './infrastructure/brevo-email.service.js';
 import { AuthController } from './presentation/auth.controller.js';
 import { OAuthConfigurationGuard } from './presentation/oauth-configuration.guard.js';
 
@@ -27,7 +27,7 @@ import { OAuthConfigurationGuard } from './presentation/oauth-configuration.guar
   providers: [
     AuthService,
     AuthSessionService,
-    SmtpEmailService,
+    BrevoEmailService,
     OAuthConfigurationGuard,
     GoogleOAuthStrategy,
     GitHubOAuthStrategy,

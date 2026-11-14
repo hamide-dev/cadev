@@ -10,8 +10,7 @@ export interface Environment {
   CLOUDINARY_CLOUD_NAME?: string;
   CLOUDINARY_API_KEY?: string;
   CLOUDINARY_API_SECRET?: string;
-  BREVO_SMTP_LOGIN?: string;
-  BREVO_SMTP_KEY?: string;
+  BREVO_API_KEY?: string;
   BREVO_FROM_EMAIL?: string;
   BREVO_FROM_NAME?: string;
   GOOGLE_CLIENT_ID?: string;
@@ -191,23 +190,21 @@ export function validateEnvironment(raw: RawEnvironment): Environment {
   };
 }
 
-// Optional Brevo SMTP relay.
+// Optional Brevo transactional API.
 function validateBrevo(raw: RawEnvironment): Partial<Environment> {
-  const login = optionalString(raw, 'BREVO_SMTP_LOGIN');
-  const key = optionalString(raw, 'BREVO_SMTP_KEY');
+  const apiKey = optionalString(raw, 'BREVO_API_KEY');
   const fromEmail = optionalString(raw, 'BREVO_FROM_EMAIL');
   assertOptionalGroup(
-    [login, key, fromEmail],
-    'BREVO_SMTP_LOGIN, BREVO_SMTP_KEY, and BREVO_FROM_EMAIL must be configured together',
+    [apiKey, fromEmail],
+    'BREVO_API_KEY and BREVO_FROM_EMAIL must be configured together',
   );
-  if (!login || !key || !fromEmail) return {};
+  if (!apiKey || !fromEmail) return {};
   if (!isEmailAddress(fromEmail)) {
     throw new Error('BREVO_FROM_EMAIL must be a valid email address');
   }
   const fromName = optionalString(raw, 'BREVO_FROM_NAME');
   return {
-    BREVO_SMTP_LOGIN: login,
-    BREVO_SMTP_KEY: key,
+    BREVO_API_KEY: apiKey,
     BREVO_FROM_EMAIL: fromEmail,
     ...(fromName ? { BREVO_FROM_NAME: fromName } : {}),
   };

@@ -4,17 +4,16 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as nodemailer from 'nodemailer';
 import type { Environment } from '../../../config/environment.js';
 import type { EmailVerificationPurpose } from './email-verification.entity.js';
 
+const BREVO_EMAIL_API_URL = 'https://api.brevo.com/v3/smtp/email';
 const PUBLIC_EMAIL_ERROR =
   "Impossible d'envoyer l'e-mail pour le moment. Réessaie plus tard.";
 
-// Brevo transactional email relay (SMTP submission on port 587).
 @Injectable()
-export class SmtpEmailService {
-  private readonly logger = new Logger(SmtpEmailService.name);
+export class BrevoEmailService {
+  private readonly logger = new Logger(BrevoEmailService.name);
 
   constructor(private readonly config: ConfigService<Environment, true>) {}
 
@@ -23,25 +22,16 @@ export class SmtpEmailService {
     code: string,
     purpose: EmailVerificationPurpose = 'registration',
   ): Promise<void> {
-    const user = this.config.get('BREVO_SMTP_LOGIN');
-    const key = this.config.get('BREVO_SMTP_KEY');
+    const apiKey = this.config.get('BREVO_API_KEY');
     const fromEmail = this.config.get('BREVO_FROM_EMAIL');
-    if (!user || !key || !fromEmail) {
-      this.logger.error('Brevo SMTP is not configured.');
+    if (!apiKey || !fromEmail) {
+      this.logger.error('Brevo email API is not configured.');
       throw new ServiceUnavailableException({
         code: 'EMAIL_PROVIDER_NOT_CONFIGURED',
         message: PUBLIC_EMAIL_ERROR,
       });
     }
-    const transport = nodemailer.createTransport({
-      host: 'smtp-relay.brevo.com',
-      port: 587,
-      secure: false,
-      connectionTimeout: 5000,
-      greetingTimeout: 5000,
-      socketTimeout: 10000,
-      auth: { user, pass: key },
-    });
+
     const purposeLabel =
       purpose === 'login'
         ? 'connexion à votre compte'
@@ -61,16 +51,8 @@ export class SmtpEmailService {
           ? 'Réinitialisez votre mot de passe'
           : 'Votre code de vérification';
     const expiryMinutes = purpose === 'password-reset' ? 2 : 4;
-    try {
-      await transport.sendMail({
-        from: {
-          name: this.config.get('BREVO_FROM_NAME') ?? 'Hello World',
-          address: fromEmail,
-        },
-        to: email,
-        subject,
-        text: `Votre code pour ${purposeLabel} Hello World : ${code}. Il expire dans ${expiryMinutes} minutes. Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.`,
-        html: `<!doctype html>
+    const textContent = `Votre code pour ${purposeLabel} Hello World : ${code}. Il expire dans ${expiryMinutes} minutes. Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.`;
+    const htmlContent = `<!doctype html>
 <html lang="fr">
   <body style="margin:0;padding:32px 16px;background-color:#141414;color:#f5f5f5;font-family:Arial,Helvetica,sans-serif;">
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:520px;margin:0 auto;border-collapse:separate;border-spacing:0;background-color:#202020;border:1px solid #373737;border-radius:14px;">
@@ -86,22 +68,32 @@ export class SmtpEmailService {
       </tr>
     </table>
   </body>
-</html>`,
+</html>`;
+    let response: Response;
+    try {
+      response = await fetch(BREVO_EMAIL_API_URL, {
+        method: 'POST',
+        headers: {
+          accept: 'application/json',
+          'api-key': apiKey,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          sender: {
+            name: this.config.get('BREVO_FROM_NAME') ?? 'Hello World',
+            email: fromEmail,
+          },
+          to: [{ email }],
+          subject,
+          textContent,
+          htmlContent,
+        }),
+        signal: AbortSignal.timeout(10_000),
       });
     } catch (error) {
       this.logger.error(
-        `SMTP delivery failed for ${purpose} (${error instanceof Error ? error.message : 'unknown error'}).`,
+        `Brevo API request failed for ${purpose} (${error instanceof Error ? error.message : 'unknown error'}).`,
       );
-      const responseCode =
-        typeof error === 'object' && error !== null && 'responseCode' in error
-          ? Number(error.responseCode)
-          : undefined;
-      if (responseCode === 535) {
-        throw new ServiceUnavailableException({
-          code: 'EMAIL_PROVIDER_AUTH_FAILED',
-          message: PUBLIC_EMAIL_ERROR,
-        });
-      }
       throw new ServiceUnavailableException(
         {
           code: 'EMAIL_PROVIDER_UNAVAILABLE',
@@ -109,6 +101,19 @@ export class SmtpEmailService {
         },
         { cause: error },
       );
+    }
+
+    if (!response.ok) {
+      this.logger.error(
+        `Brevo API rejected ${purpose} email with HTTP ${response.status}.`,
+      );
+      throw new ServiceUnavailableException({
+        code:
+          response.status === 401 || response.status === 403
+            ? 'EMAIL_PROVIDER_AUTH_FAILED'
+            : 'EMAIL_PROVIDER_UNAVAILABLE',
+        message: PUBLIC_EMAIL_ERROR,
+      });
     }
   }
 }

@@ -103,7 +103,7 @@ Parcours disponibles dans cette première tranche :
 | `CLOUDINARY_CLOUD_NAME` | Optionnel | Nom du compte Cloudinary |
 | `CLOUDINARY_API_KEY` | Optionnel | Clé publique Cloudinary |
 | `CLOUDINARY_API_SECRET` | Optionnel | Secret privé Cloudinary, serveur uniquement |
-| `BREVO_SMTP_LOGIN`, `BREVO_SMTP_KEY` | Optionnel | Identifiants SMTP Brevo (login SMTP et clé SMTP, pas la clé API) |
+| `BREVO_API_KEY` | Optionnel | Clé API Brevo, conservée côté serveur |
 | `BREVO_FROM_EMAIL` | Optionnel | Adresse expéditeur vérifiée dans Brevo |
 | `BREVO_FROM_NAME` | Optionnel | Nom expéditeur, défaut `Hello World` |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_CALLBACK_URL` | Optionnel | Identifiants et callback OAuth Google |
@@ -123,9 +123,9 @@ sa spécialité, son niveau et ses centres d'intérêt avant d'accéder au fil.
 Les trois paramètres Cloudinary peuvent rester vides pendant le développement ;
 les opérations médias répondent alors `503 MEDIA_PROVIDER_NOT_CONFIGURED`.
 Ils doivent être définis ensemble pour activer le service.
-`BREVO_SMTP_LOGIN`, `BREVO_SMTP_KEY` et `BREVO_FROM_EMAIL` sont requis ensemble
-pour envoyer les OTP via `smtp-relay.brevo.com` (port 587). L'adresse expéditeur
-doit être vérifiée dans Brevo.
+`BREVO_API_KEY` et `BREVO_FROM_EMAIL` doivent être configurés ensemble pour
+envoyer les e-mails transactionnels via l'API HTTPS de Brevo. L'adresse
+expéditeur doit être vérifiée dans Brevo.
 Les inscriptions locales restent bloquées à l'étape de vérification tant que le
 service d'e-mail n'est pas configuré. Chaque fournisseur OAuth est optionnel,
 mais ses trois paramètres doivent être définis ensemble. L'OTP à 4 chiffres
@@ -136,14 +136,14 @@ vérifiée.
 Les codes de réinitialisation du mot de passe expirent après 2 minutes.
 ### E-mails transactionnels Brevo
 
-Configurez les identifiants SMTP et un expéditeur vérifié dans Brevo, puis
-renseignez les variables `BREVO_*` dans `.env`. Utilisez une clé SMTP, pas la
-clé API. Le relais utilise `smtp-relay.brevo.com` sur le port 587.
+Configurez une clé API Brevo et un expéditeur vérifié, puis définissez
+`BREVO_API_KEY`, `BREVO_FROM_EMAIL` et, facultativement, `BREVO_FROM_NAME` dans
+les variables d'environnement du backend. L'envoi utilise l'API HTTPS de Brevo,
+pas le relais SMTP.
 
-En local, les erreurs d'envoi SMTP sont journalisées par l'API sans inclure
-la clé, le code OTP ou l'adresse du destinataire. Le frontend affiche le code
-métier et écrit les détails HTTP dans la console du navigateur en mode Vite
-développement ; ces diagnostics ne sont pas activés dans un build de production.
+Les erreurs détaillées de l'API Brevo sont journalisées côté backend sans
+exposer la clé API ni le code OTP au client. Le frontend affiche un message
+générique en cas d'échec.
 
 ## Scripts utiles
 
@@ -191,9 +191,11 @@ le dossier frère `frontend/`.
 Les commentaires et réponses sous les publications passent par HTTP. Le domaine de
 messagerie (conversations, groupes et messages) passe exclusivement par
 WebSocket/Socket.IO. La messagerie directe entre deux personnes utilise une
-conversation de type `DIRECT`. L'OTP d'inscription via SMTP et la connexion
-OAuth Google/GitHub ainsi que le renouvellement rotatif des refresh tokens sont
-implémentés (access token : 1 jour, refresh token : 2 jours). Projets,
+conversation de type `DIRECT`. L'OTP d'inscription via l'API transactionnelle
+Brevo, les codes de connexion par e-mail et de réinitialisation du mot de passe
+utilisent le même service. Les connexions OAuth Google/GitHub et le
+renouvellement rotatif des refresh tokens sont implémentés (access token :
+1 jour, refresh token : 2 jours). Projets,
 contributions, notifications, réactions, favoris et recherche restent à
 développer. Les médias sont intégrés pour les photos de profil et les pièces
 jointes image/vidéo des chats et publications. Applique les migrations avec

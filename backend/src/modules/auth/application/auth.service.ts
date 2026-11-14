@@ -14,7 +14,7 @@ import { LessThan, Repository } from 'typeorm';
 import type { Environment } from '../../../config/environment.js';
 import { UsersService } from '../../users/application/users.service.js';
 import { EmailVerificationEntity } from '../infrastructure/email-verification.entity.js';
-import { SmtpEmailService } from '../infrastructure/smtp-email.service.js';
+import { BrevoEmailService } from '../infrastructure/brevo-email.service.js';
 import type { PublicUser } from '../../users/domain/user.types.js';
 import type { RegisterDto } from '../presentation/dto/register.dto.js';
 import type { InitRegistrationDto } from '../presentation/dto/init-registration.dto.js';
@@ -74,7 +74,7 @@ export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
-    private readonly smtpEmail: SmtpEmailService,
+    private readonly emailService: BrevoEmailService,
     private readonly config: ConfigService<Environment, true>,
     @InjectRepository(EmailVerificationEntity)
     private readonly emailVerifications: Repository<EmailVerificationEntity>,
@@ -606,7 +606,7 @@ export class AuthService {
       },
       ['userId'],
     );
-    await this.smtpEmail.sendVerificationCode(email, code, purpose);
+    await this.emailService.sendVerificationCode(email, code, purpose);
   }
 
   private async sendPendingRegistrationCode(
@@ -621,7 +621,7 @@ export class AuthService {
     pending.attempts = 0;
     pending.expiresAt = new Date(Date.now() + VERIFICATION_TTL_MS);
     await this.pendingRegistrations.save(pending);
-    await this.smtpEmail.sendVerificationCode(
+    await this.emailService.sendVerificationCode(
       pending.email,
       code,
       'registration',
