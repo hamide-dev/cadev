@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { Icon } from '../../components/Icon';
 import { TopBar } from '../../components/TopBar';
+import { PushSettings } from '../notifications/PushSettings';
 import { useMe, useSession } from '../../lib/session';
 
 function Row({ title, sub, value, to }: { title: string; sub?: string; value?: string; to?: string }) {
@@ -48,6 +49,7 @@ export function Settings() {
         </section>
         <section className="stack-s">
           <h2 className="section-title">Notifications</h2>
+          <PushSettings />
           <div className="group">
             <Row title="Réponses et mentions" />
             <Row title="Activité des projets suivis" />

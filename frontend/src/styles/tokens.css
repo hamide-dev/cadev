@@ -38,5 +38,6 @@
 
   --tap: 44px;
   --nav-h: 64px;
+  --topbar-h: 68px; /* bouton de 44 px + 12 px de marge en haut et en bas */
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
