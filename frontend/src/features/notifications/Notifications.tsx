@@ -5,7 +5,7 @@ import { Icon } from '../../components/Icon';
 import { Tabs } from '../../components/Tabs';
 import { TopBar } from '../../components/TopBar';
 import { Empty, ErrorState, Loading } from '../../components/states';
-import { api } from '../../lib/api';
+import { api, ApiError } from '../../lib/api';
 import { errorMessage, timeAgo } from '../../lib/format';
 import type { PushSubscriptionInput } from '../../lib/api/types';
 import { useLoad } from '../../lib/useLoad';
@@ -55,8 +55,13 @@ export function Notifications() {
         }
       } catch (error) {
         if (active) {
-          setPushError(errorMessage(error));
-          setPushState('error');
+          if (isPushUnavailable(error)) {
+            setPushError(null);
+            setPushState('unavailable');
+          } else {
+            setPushError(errorMessage(error));
+            setPushState('error');
+          }
         }
       }
     };
@@ -91,8 +96,13 @@ export function Notifications() {
       await api.savePushSubscription(toPushSubscriptionInput(subscription));
       setPushState('enabled');
     } catch (error) {
-      setPushError(errorMessage(error));
-      setPushState('error');
+      if (isPushUnavailable(error)) {
+        setPushError(null);
+        setPushState('unavailable');
+      } else {
+        setPushError(errorMessage(error));
+        setPushState('error');
+      }
     } finally {
       setPushBusy(false);
     }
@@ -113,7 +123,11 @@ export function Notifications() {
       }
       setPushState('disabled');
     } catch (error) {
-      setPushError(errorMessage(error));
+      setPushError(
+        isPushUnavailable(error)
+          ? 'Les notifications ne peuvent pas être modifiées pour le moment.'
+          : errorMessage(error),
+      );
     } finally {
       setPushBusy(false);
     }
@@ -132,7 +146,7 @@ export function Notifications() {
         </p>
         {pushState === 'loading' && <p className="xs muted">Vérification de ce navigateur…</p>}
         {pushState === 'unavailable' && (
-          <p className="xs muted">Les notifications du navigateur ne sont pas encore configurées sur le serveur.</p>
+          <p className="xs muted">Les notifications hors de l’application ne sont pas disponibles pour le moment.</p>
         )}
         {pushState === 'unsupported' && (
           <p className="xs muted">
@@ -221,4 +235,11 @@ function decodeVapidPublicKey(publicKey: string): ArrayBuffer {
   const buffer = new ArrayBuffer(decoded.length);
   new Uint8Array(buffer).set(decoded);
   return buffer;
+}
+
+function isPushUnavailable(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    (error.status === 0 || error.code === 'PUSH_NOT_CONFIGURED')
+  );
 }

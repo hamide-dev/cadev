@@ -1,16 +1,14 @@
 import { Test } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import webPush from 'web-push';
+import { sendNotification } from 'web-push';
 import type { Environment } from '../../../config/environment.js';
 import { PushSubscriptionEntity } from '../infrastructure/push-subscription.entity.js';
 import { PushNotificationsService } from './push-notifications.service.js';
 
 vi.mock('web-push', () => ({
-  default: {
-    setVapidDetails: vi.fn(),
-    sendNotification: vi.fn(),
-  },
+  setVapidDetails: vi.fn(),
+  sendNotification: vi.fn(),
 }));
 
 describe('PushNotificationsService', () => {
@@ -79,7 +77,7 @@ describe('PushNotificationsService', () => {
     subscriptions.findBy.mockResolvedValue([
       { endpoint, p256dh: 'public-key', auth: 'auth-key' },
     ]);
-    vi.mocked(webPush.sendNotification).mockRejectedValue(
+    vi.mocked(sendNotification).mockRejectedValue(
       Object.assign(new Error('expired'), { statusCode: 410 }),
     );
 

@@ -8,7 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import type { Environment } from '../../../config/environment.js';
 import type { Repository } from 'typeorm';
-import webPush from 'web-push';
+import { sendNotification, setVapidDetails } from 'web-push';
 import { PushSubscriptionEntity } from '../infrastructure/push-subscription.entity.js';
 import type { PushSubscriptionDto } from '../presentation/dto/push-subscription.dto.js';
 
@@ -34,7 +34,7 @@ export class PushNotificationsService {
     const subject = config.get('WEB_PUSH_SUBJECT', { infer: true });
     this.isConfigured = Boolean(this.publicKey && privateKey && subject);
     if (this.publicKey && privateKey && subject) {
-      webPush.setVapidDetails(subject, this.publicKey, privateKey);
+      setVapidDetails(subject, this.publicKey, privateKey);
     }
   }
 
@@ -87,7 +87,7 @@ export class PushNotificationsService {
     await Promise.all(
       subscriptions.map(async (subscription) => {
         try {
-          await webPush.sendNotification(
+          await sendNotification(
             toWebPushSubscription(subscription),
             JSON.stringify(message),
           );
