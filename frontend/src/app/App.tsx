@@ -1,6 +1,5 @@
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { LogoMark } from '../components/Brand';
-import { Empty } from '../components/states';
 import { AuthLayout } from '../features/auth/AuthLayout';
 import { Login } from '../features/auth/Login';
 import { OAuthCallback } from '../features/auth/OAuthCallback';
@@ -23,6 +22,7 @@ import { ProjectDetail } from '../features/projects/ProjectDetail';
 import { Projects } from '../features/projects/Projects';
 import { TaskDetail } from '../features/projects/TaskDetail';
 import { useSession } from '../lib/session';
+import { NotFound } from './NotFound';
 import { Shell } from './Shell';
 
 function Splash() {
@@ -77,16 +77,7 @@ export function App() {
         <Route path="/settings" element={<Settings />} />
         <Route path="/saved" element={<Saved />} />
       </Route>
-      <Route
-        path="*"
-        element={
-          <main className="screen">
-            <Empty title="Page introuvable" action={<a href="/" className="btn">Revenir à l’accueil</a>}>
-              Ce lien ne mène nulle part.
-            </Empty>
-          </main>
-        }
-      />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }
