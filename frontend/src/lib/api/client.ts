@@ -108,7 +108,9 @@ export async function request<T>(method: string, path: string, body?: unknown): 
       body: body === undefined ? undefined : JSON.stringify(body),
     };
     response = await fetch(`${BASE}${path}`, requestOptions);
-    if (response.status === 401 && !path.startsWith('/auth/')) {
+    const shouldRefreshSession =
+      !path.startsWith('/auth/') || path === '/auth/socket-token';
+    if (response.status === 401 && shouldRefreshSession) {
       await refreshSession();
       response = await fetch(`${BASE}${path}`, requestOptions);
       if (response.status === 401) onUnauthorized();
