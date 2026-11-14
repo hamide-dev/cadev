@@ -8,7 +8,8 @@
   width: 100%;
   max-width: 600px;
   margin: 0 auto;
-  min-height: 100dvh;
+  /* svh et non dvh : la hauteur ne change pas quand la barre de Safari se replie, sinon tout saute au défilement. */
+  min-height: 100svh;
   display: flex;
   flex-direction: column;
 }
@@ -29,6 +30,8 @@
 }
 .has-mobile-nav .nav { display: grid; }
 .has-mobile-nav .shell-main { padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom)); }
+/* Un écran court tient au-dessus de la barre du bas : pas de défilement de 64 px pour rien. */
+.has-mobile-nav .screen { min-height: calc(100svh - var(--nav-h) - env(safe-area-inset-bottom)); }
 .nav-brand, .nav-publish, .nav-me, .nav-text { display: none; }
 .nav-item {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
@@ -74,6 +77,7 @@
 
   .shell { padding-left: 88px; }
   .has-mobile-nav .shell-main { padding-bottom: 0; }
+  .has-mobile-nav .screen { min-height: 100svh; }
   .nav, .has-mobile-nav .nav {
     display: flex; flex-direction: column; align-items: center; gap: var(--space-1);
     top: 0; right: auto;
