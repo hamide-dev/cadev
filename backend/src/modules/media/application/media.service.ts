@@ -43,8 +43,42 @@ export class MediaService {
   ) {}
 
   createProfileImageSignature(userId: string): UploadSignature {
+    return this.createProfileFolderSignature(`hello-world/profiles/${userId}`);
+  }
+
+  createBannerImageSignature(userId: string): UploadSignature {
+    return this.createProfileFolderSignature(`hello-world/banners/${userId}`);
+  }
+
+  async confirmProfileImage(
+    userId: string,
+    publicId: string,
+  ): Promise<{ avatarUrl: string }> {
+    const avatarUrl = await this.verifyProfileFolderAsset(
+      userId,
+      publicId,
+      `hello-world/profiles/${userId}/`,
+    );
+    await this.usersService.updateAvatarUrl(userId, avatarUrl);
+    return { avatarUrl };
+  }
+
+  async confirmBannerImage(
+    userId: string,
+    publicId: string,
+  ): Promise<{ bannerUrl: string }> {
+    const bannerUrl = await this.verifyProfileFolderAsset(
+      userId,
+      publicId,
+      `hello-world/banners/${userId}/`,
+    );
+    await this.usersService.updateBannerUrl(userId, bannerUrl);
+    return { bannerUrl };
+  }
+
+  private createProfileFolderSignature(folder: string): UploadSignature {
     return this.createSignature(
-      `hello-world/profiles/${userId}/${randomUUID()}`,
+      `${folder}/${randomUUID()}`,
       MediaResourceType.IMAGE,
       'upload',
       PROFILE_MAX_BYTES,
@@ -52,11 +86,14 @@ export class MediaService {
     );
   }
 
-  async confirmProfileImage(
+  // Photo de profil et bannière : même vérification, seul le dossier change.
+  // Le préfixe du dossier empêche de réutiliser une photo comme bannière et inversement.
+  private async verifyProfileFolderAsset(
     userId: string,
     publicId: string,
-  ): Promise<{ avatarUrl: string }> {
-    assertPublicIdPrefix(publicId, `hello-world/profiles/${userId}/`);
+    prefix: string,
+  ): Promise<string> {
+    assertPublicIdPrefix(publicId, prefix);
     const existing = await this.assets.findOneBy({
       cloudPublicId: publicId,
     });
@@ -76,8 +113,7 @@ export class MediaService {
           message: 'The profile image has no public delivery URL.',
         });
       }
-      await this.usersService.updateAvatarUrl(userId, existing.publicUrl);
-      return { avatarUrl: existing.publicUrl };
+      return existing.publicUrl;
     }
     const cloudAsset = await this.cloudinary.findAsset(
       publicId,
@@ -105,8 +141,7 @@ export class MediaService {
         messageId: null,
       }),
     );
-    await this.usersService.updateAvatarUrl(userId, cloudAsset.secureUrl);
-    return { avatarUrl: cloudAsset.secureUrl };
+    return cloudAsset.secureUrl;
   }
 
   async createChatUploadSignature(

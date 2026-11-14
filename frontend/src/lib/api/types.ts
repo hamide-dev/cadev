@@ -12,6 +12,7 @@ export interface User {
   email?: string;
   bio: string | null;
   avatarUrl: string | null;
+  bannerUrl: string | null;
   githubUrl: string | null;
   specialty: Specialty | null;
   experienceLevel: Level | null;

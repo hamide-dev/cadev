@@ -41,6 +41,7 @@ describe('MediaService', () => {
     };
     const users = {
       updateAvatarUrl: vi.fn().mockResolvedValue(undefined),
+      updateBannerUrl: vi.fn().mockResolvedValue(undefined),
       ...overrides.users,
     };
     const module = Test.createTestingModule({
@@ -154,5 +155,38 @@ describe('MediaService', () => {
       response: { code: 'INVALID_MEDIA_ID' },
     });
     expect(cloudinary.findAsset).not.toHaveBeenCalled();
+  });
+  it('sets the banner, and refuses a profile photo id as a banner', async () => {
+    const publicId = `hello-world/banners/${userId}/12345678-1234-4234-8234-123456789abc`;
+    const cloudAsset = {
+      publicId,
+      resourceType: 'image',
+      uploadType: 'upload',
+      format: 'jpg',
+      bytes: 2048,
+      secureUrl:
+        'https://res.cloudinary.com/cloud-test/image/upload/banner.jpg',
+    };
+    const { service, users } = await createService({
+      cloudinary: { findAsset: vi.fn().mockResolvedValue(cloudAsset) },
+    });
+
+    expect(service.createBannerImageSignature(userId).publicId).toMatch(
+      new RegExp(`^hello-world/banners/${userId}/`),
+    );
+    await expect(service.confirmBannerImage(userId, publicId)).resolves.toEqual({
+      bannerUrl: cloudAsset.secureUrl,
+    });
+    expect(users.updateBannerUrl).toHaveBeenCalledWith(
+      userId,
+      cloudAsset.secureUrl,
+    );
+    expect(users.updateAvatarUrl).not.toHaveBeenCalled();
+    await expect(
+      service.confirmBannerImage(
+        userId,
+        `hello-world/profiles/${userId}/12345678-1234-4234-8234-123456789abc`,
+      ),
+    ).rejects.toMatchObject({ response: { code: 'INVALID_MEDIA_ID' } });
   });
 });

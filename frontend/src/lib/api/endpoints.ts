@@ -33,7 +33,7 @@ export const api = {
   followingUsers: () => request<{ usernames: string[] }>('GET', '/users/following'),
   users: (search: string, page = 1, limit = 20) =>
     request<UserPage>('GET', `/users${qs({ search: search || undefined, page, limit })}`),
-  updateMe: (input: Partial<Omit<User, 'id' | 'email' | 'avatarUrl' | 'createdAt'>>) => request<User>('PATCH', '/users/me', input),
+  updateMe: (input: Partial<Omit<User, 'id' | 'email' | 'avatarUrl' | 'bannerUrl' | 'createdAt'>>) => request<User>('PATCH', '/users/me', input),
   user: (username: string) => request<User>('GET', `/users/${encodeURIComponent(username)}`),
   follow: (username: string) => request<{ following: true; friend: boolean }>('PUT', `/users/${encodeURIComponent(username)}/follow`),
   unfollow: (username: string) => request<{ following: false; friend?: false }>('DELETE', `/users/${encodeURIComponent(username)}/follow`),
@@ -76,6 +76,8 @@ export const api = {
   // Médias : signature côté back, envoi direct à Cloudinary, puis confirmation.
   profileSignature: () => request<UploadSignature>('POST', `/media/profile/signature?ts=${Date.now()}`),
   confirmProfile: (publicId: string) => request<{ avatarUrl: string }>('POST', '/media/profile/confirm', { publicId }),
+  bannerSignature: () => request<UploadSignature>('POST', `/media/banner/signature?ts=${Date.now()}`),
+  confirmBanner: (publicId: string) => request<{ bannerUrl: string }>('POST', '/media/banner/confirm', { publicId }),
   postSignature: (resourceType: 'image' | 'video') =>
     request<UploadSignature>('POST', `/media/posts/signature?ts=${Date.now()}`, { resourceType }),
   confirmPost: (publicId: string, resourceType: 'image' | 'video') =>

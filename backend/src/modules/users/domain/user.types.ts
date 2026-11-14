@@ -21,6 +21,7 @@ export interface PublicUser {
   email?: string;
   bio: string | null;
   avatarUrl: string | null;
+  bannerUrl: string | null;
   githubUrl: string | null;
   specialty: DeveloperSpecialty | null;
   experienceLevel: ExperienceLevel | null;

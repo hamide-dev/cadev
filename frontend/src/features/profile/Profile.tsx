@@ -13,8 +13,9 @@ import { useMe } from '../../lib/session';
 import { type Conversation, emit } from '../../lib/socket';
 import { useLoad } from '../../lib/useLoad';
 
-// Bannière décorative écrite à partir des vraies données du profil.
-function Banner({ user }: { user: User }) {
+// Image choisie par l'utilisateur, sinon bannière décorative écrite à partir des vraies données du profil.
+export function Banner({ user }: { user: User }) {
+  if (user.bannerUrl) return <img className="banner banner-img" src={user.bannerUrl} alt="" />;
   const role = user.specialty ? SPECIALTIES[user.specialty] : 'Développeur';
   const passion = user.interests[0] ?? user.technologies[0] ?? 'code';
   return (
