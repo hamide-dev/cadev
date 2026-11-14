@@ -48,6 +48,12 @@ Parcours disponibles dans cette première tranche :
   demander et valider un code OTP de connexion à 4 chiffres
 - `GET /api/v1/auth/google` et `/api/v1/auth/github` pour OAuth ; les callbacks
   définissent le cookie de session HttpOnly puis redirigent vers le frontend
+- Les sessions utilisent un access token d'un jour et un refresh token rotatif
+  de deux jours. `POST /api/v1/auth/refresh` renouvelle les cookies ;
+  `POST /api/v1/auth/logout` révoque le refresh token.
+- `POST /api/v1/auth/password/forgot` envoie un code de réinitialisation
+  (2 minutes) aux comptes vérifiés ; `POST /api/v1/auth/password/reset` valide
+  ce code et remplace le mot de passe.
 - `GET /api/v1/users?search=...&page=...&limit=...` pour rechercher et parcourir les utilisateurs par pages
 - `GET /api/v1/users/:username`, `GET/PATCH /api/v1/users/me`
 - `PUT/DELETE /api/v1/users/:username/follow` pour suivre/ne plus suivre un
@@ -123,6 +129,7 @@ est demandé lors de l'inscription locale et peut aussi servir à la connexion
 par e-mail ; le code expire après 4 minutes. La connexion par mot de passe
 reste disponible. Google et GitHub doivent retourner une adresse e-mail
 vérifiée.
+Les codes de réinitialisation du mot de passe expirent après 2 minutes.
 ### E-mails transactionnels Brevo
 
 Configurez les identifiants SMTP et un expéditeur vérifié dans Brevo, puis
@@ -181,8 +188,9 @@ Les commentaires et réponses sous les publications passent par HTTP. Le domaine
 messagerie (conversations, groupes et messages) passe exclusivement par
 WebSocket/Socket.IO. La messagerie directe entre deux personnes utilise une
 conversation de type `DIRECT`. L'OTP d'inscription via SMTP et la connexion
-OAuth Google/GitHub sont implémentés ; les refresh tokens rotatifs,
-projets/contributions, notifications, réactions, favoris et recherche restent à
+OAuth Google/GitHub ainsi que le renouvellement rotatif des refresh tokens sont
+implémentés (access token : 1 jour, refresh token : 2 jours). Projets,
+contributions, notifications, réactions, favoris et recherche restent à
 développer. Les médias sont intégrés pour les photos de profil et les pièces
-jointes image/vidéo des chats et publications. Les migrations doivent être
-appliquées avec `npm run migration:run` avant d'utiliser les nouvelles tables.
+jointes image/vidéo des chats et publications. Applique les migrations avec
+`npm run migration:run` avant d'utiliser les nouvelles tables.

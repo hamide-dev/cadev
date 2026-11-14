@@ -44,6 +44,19 @@ export class SmtpEmailService {
         : purpose === 'password-reset'
           ? 'réinitialisation de votre mot de passe'
           : 'confirmation de votre inscription';
+    const subject =
+      purpose === 'login'
+        ? 'Votre code de connexion Hello World'
+        : purpose === 'password-reset'
+          ? 'Votre code de réinitialisation Hello World'
+          : 'Confirmez votre adresse e-mail';
+    const title =
+      purpose === 'login'
+        ? 'Votre code de connexion'
+        : purpose === 'password-reset'
+          ? 'Réinitialisez votre mot de passe'
+          : 'Votre code de vérification';
+    const expiryMinutes = purpose === 'password-reset' ? 2 : 4;
     try {
       await transport.sendMail({
         from: {
@@ -51,13 +64,8 @@ export class SmtpEmailService {
           address: fromEmail,
         },
         to: email,
-        subject:
-          purpose === 'login'
-            ? 'Votre code de connexion Hello World'
-            : purpose === 'password-reset'
-              ? 'Votre code de réinitialisation Hello World'
-              : 'Confirmez votre adresse e-mail',
-        text: `Votre code pour ${purposeLabel} Hello World : ${code}. Il expire dans 4 minutes. Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.`,
+        subject,
+        text: `Votre code pour ${purposeLabel} Hello World : ${code}. Il expire dans ${expiryMinutes} minutes. Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.`,
         html: `<!doctype html>
 <html lang="fr">
   <body style="margin:0;padding:32px 16px;background-color:#141414;color:#f5f5f5;font-family:Arial,Helvetica,sans-serif;">
@@ -65,10 +73,10 @@ export class SmtpEmailService {
       <tr>
         <td style="padding:32px 28px;text-align:center;">
           <p style="margin:0 0 24px;color:#f5f5f5;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">Hello World</p>
-          <h1 style="margin:0 0 12px;color:#ffffff;font-size:22px;line-height:1.3;font-weight:700;">Votre code de vérification</h1>
+          <h1 style="margin:0 0 12px;color:#ffffff;font-size:22px;line-height:1.3;font-weight:700;">${title}</h1>
           <p style="margin:0 0 24px;color:#c7c7c7;font-size:15px;line-height:1.6;">Utilisez le code ci-dessous pour ${purposeLabel}.</p>
           <div style="margin:0 auto 24px;padding:20px 12px;background-color:#111111;border:1px solid #4a4a4a;border-radius:10px;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:36px;font-weight:700;letter-spacing:12px;line-height:1.2;text-align:center;">${code}</div>
-          <p style="margin:0;color:#b0b0b3;font-size:14px;line-height:1.6;">Ce code expire dans <strong style="color:#ffffff;">4 minutes</strong>.</p>
+          <p style="margin:0;color:#b0b0b3;font-size:14px;line-height:1.6;">Ce code expire dans <strong style="color:#ffffff;">${expiryMinutes} minutes</strong>.</p>
           <p style="margin:20px 0 0;color:#8b8b8c;font-size:12px;line-height:1.6;">Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.</p>
         </td>
       </tr>

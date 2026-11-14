@@ -1,5 +1,6 @@
 ﻿import { io, type Socket } from 'socket.io-client';
-import { API_URL, FRONTEND_API_KEY, type Author } from './api';
+import type { Author } from './api';
+import { API_URL, FRONTEND_API_KEY, request } from './api/client';
 
 // Contrat Socket.IO du namespace /messaging (docs/api-contracts.md du back).
 export interface Conversation {
@@ -7,6 +8,7 @@ export interface Conversation {
   type: 'DIRECT' | 'GROUP';
   name: string | null;
   members: Array<Pick<Author, 'id' | 'username' | 'displayName'>>;
+  unreadCount: number;
   createdAt: string;
 }
 
@@ -25,7 +27,11 @@ let socket: Socket | null = null;
 export function getSocket(): Socket {
   if (!socket) {
     socket = io(`${API_URL}/messaging`, {
-      auth: { apiKey: FRONTEND_API_KEY },
+      auth: (callback) => {
+        void request('GET', '/users/me')
+          .catch(() => undefined)
+          .finally(() => callback({ apiKey: FRONTEND_API_KEY }));
+      },
       extraHeaders: { 'x-api-key': FRONTEND_API_KEY },
       withCredentials: true,
       transports: ['websocket'],

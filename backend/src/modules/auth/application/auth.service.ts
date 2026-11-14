@@ -49,6 +49,7 @@ export interface EmailVerifiedResponse {
 }
 
 const VERIFICATION_TTL_MS = 4 * 60 * 1000;
+const PASSWORD_RESET_TTL_MS = 2 * 60 * 1000;
 const MAX_VERIFICATION_ATTEMPTS = 5;
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOGIN_LOCKOUT_MS = 2 * 60 * 1000; // 2 minutes
@@ -513,7 +514,7 @@ export class AuthService {
     return {
       message: 'If this verified account exists, a password reset code has been sent.',
       email,
-      expiresIn: VERIFICATION_TTL_MS / 1000,
+      expiresIn: PASSWORD_RESET_TTL_MS / 1000,
     };
   }
 
@@ -591,13 +592,17 @@ export class AuthService {
     purpose: EmailVerificationPurpose = 'registration',
   ): Promise<void> {
     const code = randomInt(0, 10_000).toString().padStart(4, '0');
+    const expiresIn =
+      purpose === 'password-reset'
+        ? PASSWORD_RESET_TTL_MS
+        : VERIFICATION_TTL_MS;
     await this.emailVerifications.upsert(
       {
         userId,
         codeHash: this.hashVerificationCode(userId, code, purpose),
         purpose,
         attempts: 0,
-        expiresAt: new Date(Date.now() + VERIFICATION_TTL_MS),
+        expiresAt: new Date(Date.now() + expiresIn),
       },
       ['userId'],
     );
@@ -710,7 +715,7 @@ export class AuthService {
     return {
       accessToken: await this.jwtService.signAsync({ sub: id, email }),
       tokenType: 'Bearer',
-      expiresIn: 900,
+      expiresIn: 24 * 60 * 60,
       user,
     };
   }

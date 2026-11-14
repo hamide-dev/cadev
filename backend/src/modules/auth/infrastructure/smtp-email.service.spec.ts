@@ -38,6 +38,30 @@ describe('SmtpEmailService using Brevo', () => {
     );
   });
 
+  it('sends a password-reset email with the matching subject and purpose', async () => {
+    const service = createService();
+
+    await service.sendVerificationCode(
+      'user@example.test',
+      '0042',
+      'password-reset',
+    );
+
+    expect(sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: 'user@example.test',
+        subject: 'Votre code de réinitialisation Hello World',
+        text: expect.stringMatching(
+          /réinitialisation de votre mot de passe.*expire dans 2 minutes/,
+        ),
+        html: expect.stringContaining('Réinitialisez votre mot de passe'),
+        html: expect.stringContaining(
+          'expire dans <strong style="color:#ffffff;">2 minutes</strong>',
+        ),
+      }),
+    );
+  });
+
   it('fails clearly when Brevo is not configured', async () => {
     const service = createService({ BREVO_SMTP_LOGIN: undefined });
 

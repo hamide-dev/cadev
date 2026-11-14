@@ -217,7 +217,7 @@ describe('AuthService', () => {
     ).resolves.toEqual({
       accessToken: 'access-token',
       tokenType: 'Bearer',
-      expiresIn: 900,
+      expiresIn: 24 * 60 * 60,
       user: publicUser,
     });
     expect(usersService.markEmailVerified).toHaveBeenCalledWith(user.id);
@@ -352,6 +352,65 @@ describe('AuthService', () => {
       user.email,
       expect.stringMatching(/^\d{4}$/),
       'login',
+    );
+  });
+
+  it('stores and sends a password-reset code for a verified account', async () => {
+    const verifiedUser = Object.assign(new UserEntity(), user, {
+      emailVerified: true,
+    });
+    const usersService = {
+      findByEmail: vi.fn().mockResolvedValue(verifiedUser),
+    };
+    const emailVerifications = {
+      upsert: vi.fn().mockResolvedValue(undefined),
+    };
+    const smtpEmail = {
+      sendVerificationCode: vi.fn().mockResolvedValue(undefined),
+    };
+    const module = await Test.createTestingModule({
+      providers: [
+        AuthService,
+        { provide: UsersService, useValue: usersService },
+        { provide: JwtService, useValue: {} },
+        { provide: SmtpEmailService, useValue: smtpEmail },
+        {
+          provide: ConfigService,
+          useValue: { get: vi.fn().mockReturnValue('test-secret') },
+        },
+        {
+          provide: getRepositoryToken(EmailVerificationEntity),
+          useValue: emailVerifications,
+        },
+        {
+          provide: getRepositoryToken(PendingRegistrationEntity),
+          useValue: {},
+        },
+      ],
+    }).compile();
+
+    await expect(
+      module.get(AuthService).requestPasswordReset({
+        email: ` ${user.email.toUpperCase()} `,
+      }),
+    ).resolves.toMatchObject({ email: user.email, expiresIn: 120 });
+
+    const [{ expiresAt }] = emailVerifications.upsert.mock.calls[0]!;
+    expect(expiresAt.getTime()).toBeGreaterThan(Date.now() + 115_000);
+    expect(expiresAt.getTime()).toBeLessThanOrEqual(Date.now() + 120_000);
+    expect(emailVerifications.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: user.id,
+        purpose: 'password-reset',
+        codeHash: expect.any(String),
+        expiresAt: expect.any(Date),
+      }),
+      ['userId'],
+    );
+    expect(smtpEmail.sendVerificationCode).toHaveBeenCalledWith(
+      user.email,
+      expect.stringMatching(/^\d{4}$/),
+      'password-reset',
     );
   });
 });

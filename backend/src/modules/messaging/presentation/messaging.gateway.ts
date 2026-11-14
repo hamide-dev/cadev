@@ -192,7 +192,30 @@ export class MessagingGateway implements OnGatewayInit {
     @ConnectedSocket() socket: AuthenticatedSocket,
     @MessageBody() input: MessageHistoryDto,
   ): Promise<PublicMessage[]> {
-    return this.messagingService.history(socket.data.userId, input);
+    return this.messagingService.history(socket.data.userId, input).then((messages) => {
+      if (!input.before) {
+        this.server.to(`user:${socket.data.userId}`).emit('conversation:read', {
+          conversationId: input.conversationId,
+        });
+      }
+      return messages;
+    });
+  }
+
+  @SubscribeMessage('conversation:read')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+  async markRead(
+    @ConnectedSocket() socket: AuthenticatedSocket,
+    @MessageBody() input: ConversationIdDto,
+  ): Promise<{ read: true; conversationId: string }> {
+    await this.messagingService.markRead(
+      socket.data.userId,
+      input.conversationId,
+    );
+    this.server.to(`user:${socket.data.userId}`).emit('conversation:read', {
+      conversationId: input.conversationId,
+    });
+    return { read: true, conversationId: input.conversationId };
   }
 
   @SubscribeMessage('message:send')
@@ -201,10 +224,24 @@ export class MessagingGateway implements OnGatewayInit {
     @ConnectedSocket() socket: AuthenticatedSocket,
     @MessageBody() input: SendMessageDto,
   ): Promise<PublicMessage> {
-    const message = await this.messagingService.send(socket.data.userId, input);
+    const conversation = await this.messagingService.getConversation(
+      input.conversationId,
+      socket.data.userId,
+    );
+    const message = await this.messagingService.send(
+      socket.data.userId,
+      input,
+    );
     this.server
       .to(`conversation:${input.conversationId}`)
       .emit('message:created', message);
+    for (const member of conversation.members) {
+      if (member.id !== socket.data.userId) {
+        this.server.to(`user:${member.id}`).emit('message:unread', {
+          conversationId: input.conversationId,
+        });
+      }
+    }
     return message;
   }
 

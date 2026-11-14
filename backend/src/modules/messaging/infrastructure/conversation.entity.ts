@@ -68,6 +68,9 @@ export class ConversationMemberEntity {
   @Column({ type: 'boolean', default: false })
   isAdmin!: boolean;
 
+  @Column({ type: 'timestamptz', nullable: true })
+  lastReadAt!: Date | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   joinedAt!: Date;
 }

@@ -15,7 +15,7 @@ export function OAuthCallback() {
     const restore = async () => {
       try {
         const user = await api.me();
-        signIn({ expiresIn: 900, user });
+        signIn({ expiresIn: 24 * 60 * 60, user });
         const onboarding = params.get('onboarding') === '1';
         navigate(onboarding ? '/signup/oauth' : '/feed', { replace: true });
       } catch (reason) {

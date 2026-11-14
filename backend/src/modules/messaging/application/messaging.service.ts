@@ -128,7 +128,31 @@ export class MessagingService {
       .orderBy('conversation.createdAt', 'DESC')
       .take(100)
       .getMany();
-    return conversations.map(mapConversation);
+    if (conversations.length === 0) return [];
+
+    const unreadRows = await this.members
+      .createQueryBuilder('membership')
+      .select('membership.conversationId', 'conversationId')
+      .addSelect('COUNT(message.id)', 'unreadCount')
+      .leftJoin(
+        MessageEntity,
+        'message',
+        'message.conversationId = membership.conversationId AND message.senderId != :userId AND (membership.lastReadAt IS NULL OR message.createdAt > membership.lastReadAt)',
+        { userId },
+      )
+      .where('membership.userId = :userId', { userId })
+      .andWhere('membership.conversationId IN (:...conversationIds)', {
+        conversationIds: conversations.map((conversation) => conversation.id),
+      })
+      .groupBy('membership.conversationId')
+      .getRawMany<{ conversationId: string; unreadCount: string }>();
+    const unreadByConversation = new Map(
+      unreadRows.map((row) => [row.conversationId, Number(row.unreadCount)]),
+    );
+    return conversations.map((conversation) => ({
+      ...mapConversation(conversation),
+      unreadCount: unreadByConversation.get(conversation.id) ?? 0,
+    }));
   }
 
   async getConversation(
@@ -179,11 +203,22 @@ export class MessagingService {
       });
     }
     const messages = (await query.getMany()).reverse();
+    if (!input.before) {
+      await this.markRead(userId, input.conversationId);
+    }
     const attachments = await this.mediaService.getPublicAttachments(
       messages.map((message) => message.id),
     );
     return messages.map((message) =>
       mapMessage(message, attachments.get(message.id) ?? []),
+    );
+  }
+
+  async markRead(userId: string, conversationId: string): Promise<void> {
+    await this.assertMember(conversationId, userId);
+    await this.members.update(
+      { conversationId, userId },
+      { lastReadAt: new Date() },
     );
   }
 
@@ -302,6 +337,7 @@ function mapConversation(conversation: ConversationEntity): PublicConversation {
     id: conversation.id,
     type: conversation.type,
     name: conversation.name,
+    unreadCount: 0,
     members: conversation.members.map((member) => ({
       id: member.user.id,
       username: member.user.username,

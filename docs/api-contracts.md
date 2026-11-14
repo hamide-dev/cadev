@@ -17,7 +17,7 @@ Les réponses exposent uniquement les champs explicitement autorisés.
 | HTTP | `GET/POST /api/v1/posts/:postId/comments`, `PATCH/DELETE /api/v1/posts/comments/:commentId` |
 | HTTP | Questions : `GET/POST /api/v1/posts/:postId/answers`, vote utile et suivi de question |
 | HTTP | Aperçu GitHub public : `GET /api/v1/github-preview?url=...` |
-| Socket.IO `/messaging` | `conversation:create`, `conversation:list`, `conversation:join`, `conversation:leave`, `message:history`, `message:send`, `typing:start`, `typing:stop` |
+| Socket.IO `/messaging` | `conversation:create`, `conversation:list`, `conversation:join`, `conversation:leave`, `conversation:read`, `message:history`, `message:send`, `typing:start`, `typing:stop` |
 
 La tranche disponible persiste les comptes locaux et leurs vérifications
 d'adresse e-mail, profils de développeur, abonnements, posts et médias,
@@ -27,8 +27,7 @@ mentions, épinglage et flux paginés. Les inscriptions locales envoient un OTP
 à 4 chiffres via le relais SMTP Brevo ; OAuth Google/GitHub accepte uniquement des adresses
 vérifiées par le fournisseur.
 
-Non encore livrés : refresh tokens rotatifs et révocables,
-projets/tâches/contributions, salons projet, notifications, favoris,
+Non encore livrés : projets/tâches/contributions, salons projet, notifications, favoris,
 réactions autres que les likes, accusés de lecture, notes vocales et recherche.
 
 ## Principes de transport
@@ -51,7 +50,10 @@ réactions autres que les likes, accusés de lecture, notes vocales et recherche
   de groupes, adhésions, historique, messages et événements de présence/lecture.
   Aucune route HTTP de messagerie n'est exposée.
 - Le JWT d'application authentifie HTTP et Socket.IO. Les tokens OAuth du
-  fournisseur ne sont jamais envoyés au client.
+  fournisseur ne sont jamais envoyés au client. L'access token est placé dans
+  un cookie HttpOnly valable 1 jour ; le refresh token, HttpOnly et rotatif,
+  est valable 2 jours. Le frontend renouvelle la session après un `401` et
+  vérifie la session avant chaque nouvelle connexion Socket.IO.
 - Les erreurs HTTP et les erreurs Socket.IO utilisent les formes normalisées
   décrites ci-dessous.
 
@@ -113,9 +115,10 @@ pas renvoyé dans les réponses JSON.
 | `POST /auth/email/resend` | Non | `email` → statut générique d'envoi | Disponible ; limite de débit, ne révèle pas si un compte existe. |
 | `POST /auth/login` | Non | e-mail + mot de passe → utilisateur public et cookie de session HttpOnly | Disponible ; réservé aux comptes vérifiés ; limitation de débit. |
 | `POST /auth/login/code`, `POST /auth/login/verify` | Non | e-mail puis code à 4 chiffres → utilisateur public et cookie de session HttpOnly | Disponible ; OTP valable 4 min, à usage unique ; réponse d'envoi générique. |
+| `POST /auth/password/forgot`, `POST /auth/password/reset` | Non | e-mail puis code à 4 chiffres et nouveau mot de passe | Disponible ; code de réinitialisation valable 2 min. |
 | `GET /auth/google`, `GET /auth/google/callback` | OAuth | Redirection fournisseur puis redirection frontend avec cookie de session HttpOnly | Disponible si les identifiants OAuth sont configurés ; e-mail Google vérifié requis. |
 | `GET /auth/github`, `GET /auth/github/callback` | OAuth | Redirection fournisseur puis redirection frontend avec cookie de session HttpOnly | Disponible si les identifiants OAuth sont configurés ; e-mail principal GitHub vérifié requis. |
-| `POST /auth/refresh`, `POST /auth/logout` | Session | refresh/révocation → résultat | Prévu, non disponible. |
+| `POST /auth/refresh`, `POST /auth/logout` | Cookie refresh HttpOnly | rotation/révocation → résultat | Disponible ; access token valable 1 jour, refresh token rotatif valable 2 jours. Le frontend renouvelle la session après un `401`. |
 | `GET /users/:username`, `GET/PATCH /users/me` | Lecture publique / authentifié | profil public / champs modifiables → profil public | Disponible ; profil développeur avec handle, spécialité, niveau, intérêts, technologies et URL GitHub ; champs sensibles exclus. |
 | `GET /users?search=...&page=...&limit=...` | Authentifié | recherche nom/pseudo et pagination → `{ items, page, limit, total, hasMore }` | Disponible ; n'inclut pas l'adresse e-mail ni le profil de la personne connectée ; 20 utilisateurs par défaut, 50 maximum. |
 | `GET /users/following` | Authentifié | → `{ usernames }` | Disponible ; utilisé pour restaurer l'état des abonnements dans Explorer. |
@@ -160,14 +163,14 @@ avant d'accepter la connexion. Les DTO des événements sont validés à récept
 | Événement entrant | Payload principal | Autorisation et résultat |
 |---|---|---|
 | `conversation:create` | `{ type: "DIRECT" \| "GROUP", memberIds, name? }` | Disponible ; créateur ajouté, direct = 2 membres, groupe = 2 à 30 membres. |
-| `conversation:list` | Aucun | Disponible ; renvoie les conversations où l'émetteur est membre. |
+| `conversation:list` | Aucun | Disponible ; renvoie les conversations où l'émetteur est membre, avec `unreadCount` pour chaque conversation. |
 | `conversation:join` | `{ conversationId }` | Disponible ; vérifie l'appartenance avant de joindre la room Socket.IO. |
 | `conversation:leave` | `{ conversationId }` | Disponible ; quitte la room sans modifier l'adhésion persistante. |
+| `conversation:read` | `{ conversationId }` | Disponible ; marque les messages reçus de la conversation comme lus. |
 | `conversation:members:update` | `{ conversationId, addMemberIds?, removeMemberIds? }` | Prévu, non disponible. |
-| `message:history` | `{ conversationId, before?, limit? }` | Disponible ; vérifie l'appartenance et renvoie les messages triés. |
+| `message:history` | `{ conversationId, before?, limit? }` | Disponible ; vérifie l'appartenance, renvoie les messages triés et marque comme lus les messages lors du chargement initial. |
 | `message:send` | `{ conversationId, type, content, parentMessageId? }` | Disponible ; vérifie membre et parent dans la même conversation, persiste avant émission. |
 | `media:upload` | Payload binaire | Prévu, non disponible. |
-| `message:read` | `{ conversationId, upToMessageId }` | Prévu, non disponible. |
 | `typing:start`, `typing:stop` | `{ conversationId }` | Disponible ; vérifie l'appartenance avant diffusion éphémère. |
 
 Événements serveur :
@@ -175,10 +178,11 @@ avant d'accepter la connexion. Les DTO des événements sont validés à récept
 | Événement sortant | Destinataires | Données |
 |---|---|---|
 | `conversation:created` | Membres concernés connectés | DTO conversation et membres publics minimaux. |
+| `conversation:read` | Autres connexions de l'utilisateur concerné | `{ conversationId }` après mise à jour de la dernière lecture. |
 | `conversation:updated` | Membres concernés | Prévu, non disponible. |
+| `message:unread` | Autres membres connectés | `{ conversationId }` pour rafraîchir le nombre de messages non lus. |
 | `message:created` | Room de la conversation | DTO message et auteur public ; événement après persistance. |
 | `media:uploaded` | Socket émettrice | Prévu, non disponible. |
-| `message:read` | Membres concernés | Prévu, non disponible. |
 | `typing:started`, `typing:stopped` | Autres membres de la conversation | Identifiant public de l'émetteur. |
 | `notification:created` | Utilisateur connecté destinataire | Prévu, non disponible. |
 | `exception` | Socket émettrice | Événement d'erreur NestJS pour les erreurs de validation et d'autorisation. |

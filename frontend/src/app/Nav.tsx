@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import { Avatar } from '../components/Avatar';
 import { LogoMark } from '../components/Brand';
 import { Icon } from '../components/Icon';
 import { useMe } from '../lib/session';
 import { api } from '../lib/api';
-import { emit, type Conversation } from '../lib/socket';
+import { emit, getSocket, type Conversation } from '../lib/socket';
 
 const NAV = [
   { to: '/feed', label: 'Fil', long: 'Fil d’actualité', icon: 'home' },
@@ -19,8 +19,33 @@ const NAV = [
 // barre du bas sur mobile, rail d'icônes sur tablette, barre latérale complète sur desktop.
 export function Nav() {
   const me = useMe();
+  const { pathname } = useLocation();
   const [mentionCount, setMentionCount] = useState(0);
   const [messageCount, setMessageCount] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    const updateMessageCount = () => {
+      void emit<Conversation[]>('conversation:list').then((items) => {
+        if (active) {
+          setMessageCount(items.reduce((count, item) => count + item.unreadCount, 0));
+        }
+      }).catch(() => {
+        if (active) setMessageCount(0);
+      });
+    };
+    const socket = getSocket();
+    socket.on('message:created', updateMessageCount);
+    socket.on('message:unread', updateMessageCount);
+    socket.on('conversation:read', updateMessageCount);
+    updateMessageCount();
+    return () => {
+      active = false;
+      socket.off('message:created', updateMessageCount);
+      socket.off('message:unread', updateMessageCount);
+      socket.off('conversation:read', updateMessageCount);
+    };
+  }, [pathname]);
 
   useEffect(() => {
     let active = true;
@@ -28,11 +53,6 @@ export function Nav() {
       if (active) setMentionCount(items.filter((item) => !item.readAt && item.type === 'MENTION').length);
     }).catch(() => {
       if (active) setMentionCount(0);
-    });
-    void emit<Conversation[]>('conversation:list').then((items) => {
-      if (active) setMessageCount(items.length);
-    }).catch(() => {
-      if (active) setMessageCount(0);
     });
     return () => {
       active = false;
@@ -51,7 +71,7 @@ export function Nav() {
           <span className="nav-short">{item.label}</span>
           <span className="nav-text">{item.long}</span>
           {item.to === '/notifications' && mentionCount > 0 && <span className="nav-badge" aria-label={`${mentionCount} mention${mentionCount > 1 ? 's' : ''} non lue${mentionCount > 1 ? 's' : ''}`}>{mentionCount > 99 ? '99+' : mentionCount}</span>}
-          {item.to === '/messages' && messageCount > 0 && <span className="nav-badge" aria-label={`${messageCount} conversation${messageCount > 1 ? 's' : ''}`}>{messageCount > 99 ? '99+' : messageCount}</span>}
+          {item.to === '/messages' && messageCount > 0 && <span className="nav-badge" aria-label={`${messageCount} message${messageCount > 1 ? 's' : ''} non lu${messageCount > 1 ? 's' : ''}`}>{messageCount > 99 ? '99+' : messageCount}</span>}
         </NavLink>
       ))}
       <Link to="/publish" className="btn btn-primary nav-publish" aria-label="Publier">

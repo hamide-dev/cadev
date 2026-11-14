@@ -68,10 +68,29 @@ export function setUnauthorizedHandler(handler: () => void): void {
   onUnauthorized = handler;
 }
 
+let refreshRequest: Promise<boolean> | null = null;
+
+function refreshSession(): Promise<boolean> {
+  if (!refreshRequest) {
+    refreshRequest = fetch(`${BASE}/auth/refresh`, {
+      method: 'POST',
+      cache: 'no-store',
+      credentials: 'include',
+      headers: { 'x-api-key': FRONTEND_API_KEY },
+    })
+      .then((response) => response.ok)
+      .catch(() => false)
+      .finally(() => {
+        refreshRequest = null;
+      });
+  }
+  return refreshRequest;
+}
+
 export async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`${BASE}${path}`, {
+    const requestOptions: RequestInit = {
       method,
       cache: 'no-store',
       credentials: 'include',
@@ -83,7 +102,13 @@ export async function request<T>(method: string, path: string, body?: unknown): 
         ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
       },
       body: body === undefined ? undefined : JSON.stringify(body),
-    });
+    };
+    response = await fetch(`${BASE}${path}`, requestOptions);
+    if (response.status === 401 && !path.startsWith('/auth/')) {
+      await refreshSession();
+      response = await fetch(`${BASE}${path}`, requestOptions);
+      if (response.status === 401) onUnauthorized();
+    }
   } catch {
     throw new ApiError(0, 'NETWORK', 'Impossible de joindre le serveur. Vérifie ta connexion et réessaie.');
   }
@@ -98,7 +123,6 @@ export async function request<T>(method: string, path: string, body?: unknown): 
         message: data?.message,
       });
     }
-    if (response.status === 401 && !path.startsWith('/auth/')) onUnauthorized();
     const serverMsg = typeof data?.message === 'string' && data.message.length > 0 ? data.message : null;
     throw new ApiError(
       response.status,

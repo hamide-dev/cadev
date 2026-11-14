@@ -6,10 +6,11 @@ import {
   Post,
   Req,
   Res,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
@@ -19,6 +20,7 @@ import {
   type RegistrationResponse,
   type EmailVerifiedResponse,
 } from '../application/auth.service.js';
+import { AuthSessionService } from '../application/auth-session.service.js';
 import type { OAuthIdentity } from '../domain/oauth-identity.js';
 import { LoginDto } from './dto/login.dto.js';
 import { RegisterDto } from './dto/register.dto.js';
@@ -41,33 +43,51 @@ interface OAuthRequest {
 }
 
 type PublicAuthResponse = Pick<AuthResponse, 'expiresIn' | 'user'>;
+const ACCESS_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+const REFRESH_TOKEN_TTL_MS = 2 * 24 * 60 * 60 * 1000;
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
+    private readonly authSessionService: AuthSessionService,
     private readonly config: ConfigService<Environment, true>,
   ) {}
 
-  private setAuthCookie(response: Response, token: string): void {
+  private writeAuthCookies(
+    response: Response,
+    accessToken: string,
+    refreshToken: string,
+  ): void {
     const isProduction = process.env.NODE_ENV === 'production';
-    response.cookie('access_token', token, {
+    response.cookie('access_token', accessToken, {
       httpOnly: true,
       secure: isProduction,
       sameSite: isProduction ? 'none' : 'lax',
       path: '/',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 jours
+      maxAge: ACCESS_TOKEN_TTL_MS,
+    });
+    response.cookie('refresh_token', refreshToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      path: '/api/v1/auth',
+      maxAge: REFRESH_TOKEN_TTL_MS,
     });
   }
 
-  private clearAuthCookie(response: Response): void {
+  private clearAuthCookies(response: Response): void {
     const isProduction = process.env.NODE_ENV === 'production';
-    response.clearCookie('access_token', {
+    const cookieOptions = {
       httpOnly: true,
       secure: isProduction,
-      sameSite: isProduction ? 'none' : 'lax',
-      path: '/',
+      sameSite: isProduction ? ('none' as const) : ('lax' as const),
+    };
+    response.clearCookie('access_token', { ...cookieOptions, path: '/' });
+    response.clearCookie('refresh_token', {
+      ...cookieOptions,
+      path: '/api/v1/auth',
     });
   }
 
@@ -95,7 +115,7 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response,
   ): Promise<PublicAuthResponse> {
     const auth = await this.authService.completeRegistration(input);
-    this.setAuthCookie(response, auth.accessToken);
+    await this.setSessionCookies(response, auth.accessToken);
     return this.toPublicAuthResponse(auth);
   }
 
@@ -128,7 +148,7 @@ export class AuthController {
   ): Promise<PublicAuthResponse | EmailVerifiedResponse> {
     const result = await this.authService.verifyEmail(input);
     if ('accessToken' in result) {
-      this.setAuthCookie(response, result.accessToken);
+      await this.setSessionCookies(response, result.accessToken);
       return this.toPublicAuthResponse(result);
     }
     return result;
@@ -160,7 +180,7 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response,
   ): Promise<PublicAuthResponse> {
     const auth = await this.authService.verifyLoginCode(input);
-    this.setAuthCookie(response, auth.accessToken);
+    await this.setSessionCookies(response, auth.accessToken);
     return this.toPublicAuthResponse(auth);
   }
 
@@ -172,15 +192,33 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response,
   ): Promise<PublicAuthResponse> {
     const auth = await this.authService.login(input);
-    this.setAuthCookie(response, auth.accessToken);
+    await this.setSessionCookies(response, auth.accessToken);
     return this.toPublicAuthResponse(auth);
   }
 
   @Post('logout')
-  @ApiOperation({ summary: 'Sign out and clear auth cookie' })
-  logout(@Res({ passthrough: true }) response: Response): { success: true } {
-    this.clearAuthCookie(response);
+  @ApiOperation({ summary: 'Revoke the refresh token and clear session cookies' })
+  async logout(
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<{ success: true }> {
+    await this.authSessionService.revoke(request.cookies?.['refresh_token']);
+    this.clearAuthCookies(response);
     return { success: true };
+  }
+
+  @Post('refresh')
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Rotate the refresh token and renew the session' })
+  async refresh(
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<{ expiresIn: number }> {
+    const refreshToken = request.cookies?.['refresh_token'];
+    if (!refreshToken) throw new UnauthorizedException();
+    const tokens = await this.authSessionService.refresh(refreshToken);
+    this.writeAuthCookies(response, tokens.accessToken, tokens.refreshToken);
+    return { expiresIn: 24 * 60 * 60 };
   }
 
   @Post('password/forgot')
@@ -236,7 +274,7 @@ export class AuthController {
     response: Response,
   ): Promise<void> {
     const auth = await this.authService.loginWithOAuth(identity);
-    this.setAuthCookie(response, auth.accessToken);
+    await this.setSessionCookies(response, auth.accessToken);
     const needsOnboarding =
       !auth.user.specialty ||
       !auth.user.experienceLevel ||
@@ -249,5 +287,14 @@ export class AuthController {
 
   private toPublicAuthResponse(auth: AuthResponse): PublicAuthResponse {
     return { expiresIn: auth.expiresIn, user: auth.user };
+  }
+
+  private async setSessionCookies(
+    response: Response,
+    accessToken: string,
+  ): Promise<void> {
+    const refreshToken =
+      await this.authSessionService.createRefreshToken(accessToken);
+    this.writeAuthCookies(response, accessToken, refreshToken);
   }
 }

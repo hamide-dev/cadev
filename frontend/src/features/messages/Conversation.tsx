@@ -38,6 +38,9 @@ export function ConversationScreen() {
     const onMessage = (message: Message) => {
       if (message.conversationId !== id) return;
       setMessages((list) => (list && !list.some((m) => m.id === message.id) ? [...list, message] : list));
+      if (message.sender.id !== me.id) {
+        void emit('conversation:read', { conversationId: id }).catch((err) => setError(errorMessage(err)));
+      }
     };
     const onTyping = ({ userId }: { userId: string }) => setTyping((list) => (list.includes(userId) ? list : [...list, userId]));
     const onStopped = ({ userId }: { userId: string }) => setTyping((list) => list.filter((u) => u !== userId));
@@ -68,7 +71,7 @@ export function ConversationScreen() {
       socket.off('typing:stopped', onStopped);
       socket.emit('conversation:leave', { conversationId: id });
     };
-  }, [id]);
+  }, [id, me.id]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: 'end' });

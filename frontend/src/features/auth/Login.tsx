@@ -20,6 +20,10 @@ export function Login() {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (forgot) {
+      await requestReset();
+      return;
+    }
     if (!EMAIL_PATTERN.test(email)) return setError('Saisis une adresse e-mail valide, par exemple awa@example.com.');
     setBusy(true);
     setError(null);
@@ -86,7 +90,7 @@ export function Login() {
               {error}
             </p>
           )}
-          {!forgot ? <><div className="field">
+          <div className="field">
             <label htmlFor="login-email">E-mail</label>
             <div className="input-wrap">
               <input
@@ -96,10 +100,12 @@ export function Login() {
                 autoComplete="email"
                 placeholder="awa@example.com"
                 value={email}
+                disabled={forgot && resetSent}
                 onChange={(event) => setEmail(event.target.value)}
               />
             </div>
           </div>
+          {!forgot ? <>
           <div className="field">
                 <label htmlFor="login-password">Mot de passe</label>
                 <input id="login-password" className="input" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} />
@@ -110,13 +116,15 @@ export function Login() {
           <button type="button" className="link small" onClick={() => { setForgot(true); setError(null); }}>
             Mot de passe oublié ?
           </button></> : <section className="stack">
-            <p className="small muted">Entre ton e-mail pour recevoir un code de réinitialisation.</p>
+            <p className="small muted">Entre ton e-mail pour recevoir un code de réinitialisation valable 2 minutes.</p>
             {!resetSent ? <button type="button" className="btn btn-primary btn-block" disabled={busy} onClick={requestReset}>
               {busy ? <span className="spinner" /> : 'Recevoir le code'}
             </button> : <>
+              <p className="small muted" role="status">Si cette adresse correspond à un compte vérifié, un code de réinitialisation vient d’être envoyé. Vérifie aussi tes courriers indésirables.</p>
               <label className="field"><span>Code reçu</span><input className="input" inputMode="numeric" maxLength={4} value={resetCode} onChange={(e) => setResetCode(e.target.value.replace(/\D/g, ''))} /></label>
               <label className="field"><span>Nouveau mot de passe</span><input className="input" type="password" minLength={8} maxLength={72} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} /></label>
               <button type="button" className="btn btn-primary btn-block" disabled={busy} onClick={reset}>Réinitialiser le mot de passe</button>
+              <button type="button" className="link small" disabled={busy} onClick={requestReset}>Renvoyer le code</button>
             </>}
             <button type="button" className="link small" onClick={() => { setForgot(false); setError(null); }}>Retour à la connexion</button>
           </section>}
