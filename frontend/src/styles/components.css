@@ -406,9 +406,9 @@ a.list-item:hover, button.list-item:hover { background: var(--surface); }
 .unread-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
 
 /* ---------- Page 404 ---------- */
-/* Mobile : lecture verticale, CTA au pouce. Large : bloc centré, motif en Z (logo haut gauche, CTA en bas). */
+/* Mobile : lecture verticale, CTA au pouce. Large : bloc centré, logo centré en haut, CTA en bas. */
 .notfound { padding: var(--space-5) var(--space-4) calc(var(--space-5) + env(safe-area-inset-bottom)); gap: var(--space-6); }
-.notfound-brand { align-self: flex-start; min-height: var(--tap); }
+.notfound-brand { align-self: center; }
 .notfound-brand .brand { font-size: 18px; }
 .notfound-body { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: var(--space-4); }
 .notfound-code { font-size: 72px; font-weight: 700; line-height: 1; color: var(--accent); letter-spacing: -0.02em; }
