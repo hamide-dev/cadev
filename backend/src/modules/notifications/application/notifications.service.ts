@@ -16,6 +16,25 @@ export interface PublicNotification {
   createdAt: string;
 }
 
+function getNotificationMessage(
+  type: NotificationType,
+  actorUsername: string,
+): string {
+  const actor = `@${actorUsername}`;
+  switch (type) {
+    case NotificationType.LIKE:
+      return `${actor} a aimé votre publication`;
+    case NotificationType.COMMENT:
+      return `${actor} a commenté votre publication`;
+    case NotificationType.REPLY:
+      return `${actor} a répondu à votre commentaire`;
+    case NotificationType.MENTION:
+      return `${actor} vous a mentionné`;
+    default:
+      throw new Error(`Unsupported notification type: ${type}`);
+  }
+}
+
 @Injectable()
 export class NotificationsService {
   constructor(
@@ -46,6 +65,26 @@ export class NotificationsService {
     );
   }
 
+  async notifyUser(
+    actorId: string,
+    recipientId: string,
+    type: NotificationType,
+    postId: string | null,
+    commentId: string | null,
+  ): Promise<void> {
+    if (actorId === recipientId) return;
+    await this.notifications.save(
+      this.notifications.create({
+        recipientId,
+        actorId,
+        type,
+        postId,
+        commentId,
+        readAt: null,
+      }),
+    );
+  }
+
   async listForUser(userId: string): Promise<PublicNotification[]> {
     const notifications = await this.notifications.find({
       where: { recipientId: userId },
@@ -57,7 +96,10 @@ export class NotificationsService {
       id: notification.id,
       type: notification.type,
       actor: this.users.toPublic(notification.actor),
-      message: `@${notification.actor.username} t’a mentionné`,
+      message: getNotificationMessage(
+        notification.type,
+        notification.actor.username,
+      ),
       postId: notification.postId,
       commentId: notification.commentId,
       readAt: notification.readAt?.toISOString() ?? null,

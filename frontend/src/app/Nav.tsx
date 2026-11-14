@@ -20,7 +20,7 @@ const NAV = [
 export function Nav() {
   const me = useMe();
   const { pathname } = useLocation();
-  const [mentionCount, setMentionCount] = useState(0);
+  const [notificationCount, setNotificationCount] = useState(0);
   const [messageCount, setMessageCount] = useState(0);
 
   useEffect(() => {
@@ -50,9 +50,11 @@ export function Nav() {
   useEffect(() => {
     let active = true;
     void api.notifications().then((items) => {
-      if (active) setMentionCount(items.filter((item) => !item.readAt && item.type === 'MENTION').length);
+      if (active) {
+        setNotificationCount(items.filter((item) => !item.readAt).length);
+      }
     }).catch(() => {
-      if (active) setMentionCount(0);
+      if (active) setNotificationCount(0);
     });
     return () => {
       active = false;
@@ -70,7 +72,7 @@ export function Nav() {
           <Icon name={item.icon} />
           <span className="nav-short">{item.label}</span>
           <span className="nav-text">{item.long}</span>
-          {item.to === '/notifications' && mentionCount > 0 && <span className="nav-badge" aria-label={`${mentionCount} mention${mentionCount > 1 ? 's' : ''} non lue${mentionCount > 1 ? 's' : ''}`}>{mentionCount > 99 ? '99+' : mentionCount}</span>}
+          {item.to === '/notifications' && notificationCount > 0 && <span className="nav-badge" aria-label={`${notificationCount} notification${notificationCount > 1 ? 's' : ''} non lue${notificationCount > 1 ? 's' : ''}`}>{notificationCount > 99 ? '99+' : notificationCount}</span>}
           {item.to === '/messages' && messageCount > 0 && <span className="nav-badge" aria-label={`${messageCount} message${messageCount > 1 ? 's' : ''} non lu${messageCount > 1 ? 's' : ''}`}>{messageCount > 99 ? '99+' : messageCount}</span>}
         </NavLink>
       ))}

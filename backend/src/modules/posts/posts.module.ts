@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { NotificationsModule } from '../notifications/notifications.module.js';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SecurityModule } from '../../security/security.module.js';
 import { MediaModule } from '../media/media.module.js';
@@ -17,6 +18,7 @@ import { PostsController } from './presentation/posts.controller.js';
 
 @Module({
   imports: [
+    NotificationsModule,
     TypeOrmModule.forFeature([
       PostEntity,
       CommentEntity,

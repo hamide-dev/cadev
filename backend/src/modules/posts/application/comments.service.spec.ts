@@ -6,6 +6,7 @@ import { PostEntity } from '../infrastructure/post.entity.js';
 import { UserEntity } from '../../users/infrastructure/user.entity.js';
 import { CommentMentionEntity } from '../infrastructure/comment-mention.entity.js';
 import { CommentVoteEntity } from '../infrastructure/comment-vote.entity.js';
+import { NotificationsService } from '../../notifications/application/notifications.service.js';
 
 describe('CommentsService', () => {
   it('rejects a reply whose parent comment belongs to another post', async () => {
@@ -14,6 +15,10 @@ describe('CommentsService', () => {
     };
     const postsRepository = {
       existsBy: vi.fn().mockResolvedValue(true),
+      findOneBy: vi.fn().mockResolvedValue({
+        id: '292bbd98-e066-4550-9dbc-bb2debc54468',
+        authorId: 'post-author',
+      }),
     };
     const testingModule = await Test.createTestingModule({
       providers: [
@@ -37,6 +42,13 @@ describe('CommentsService', () => {
         {
           provide: getRepositoryToken(UserEntity),
           useValue: {},
+        },
+        {
+          provide: NotificationsService,
+          useValue: {
+            notifyUser: vi.fn(),
+            notifyMentions: vi.fn(),
+          },
         },
       ],
     }).compile();

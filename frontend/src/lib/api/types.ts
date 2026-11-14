@@ -39,7 +39,7 @@ export interface Media {
 }
 export interface Notification {
   id: string;
-  type: 'MENTION';
+  type: 'LIKE' | 'COMMENT' | 'REPLY' | 'MENTION';
   actor: User;
   message: string;
   postId: string | null;

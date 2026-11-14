@@ -1,6 +1,8 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { MediaService } from '../../media/application/media.service.js';
+import { NotificationsService } from '../../notifications/application/notifications.service.js';
+import { NotificationType } from '../../notifications/infrastructure/notification.entity.js';
 import { UserEntity } from '../../users/infrastructure/user.entity.js';
 import { UserFollowEntity } from '../../users/infrastructure/user-follow.entity.js';
 import { PostEntity } from '../infrastructure/post.entity.js';
@@ -39,6 +41,7 @@ describe('PostsService', () => {
     };
     const mentions = {
       delete: vi.fn(),
+      find: vi.fn().mockResolvedValue([]),
       save: vi.fn(),
       create: vi.fn((value: object) => value),
     };
@@ -52,6 +55,10 @@ describe('PostsService', () => {
     const media = {
       attachPostAssets: vi.fn(),
       getPublicPostAttachments: vi.fn(),
+    };
+    const notifications = {
+      notifyUser: vi.fn(),
+      notifyMentions: vi.fn(),
     };
     const module = Test.createTestingModule({
       providers: [
@@ -67,6 +74,7 @@ describe('PostsService', () => {
           useValue: questionFollows,
         },
         { provide: MediaService, useValue: media },
+        { provide: NotificationsService, useValue: notifications },
       ],
     });
     return module.compile().then((compiled) => ({
@@ -75,6 +83,7 @@ describe('PostsService', () => {
       likes,
       questionFollows,
       media,
+      notifications,
     }));
   }
 
@@ -93,7 +102,7 @@ describe('PostsService', () => {
   });
 
   it('treats a duplicate like as an idempotent success', async () => {
-    const { service, posts, likes } = await createService({
+    const { service, posts, likes, notifications } = await createService({
       posts: {
         findOneBy: vi.fn().mockResolvedValue({
           id: 'post-id',
@@ -116,6 +125,29 @@ describe('PostsService', () => {
       userId: 'user-id',
       postId: 'post-id',
     });
+    expect(notifications.notifyUser).not.toHaveBeenCalled();
+  });
+
+  it('notifies the post author when a like is new', async () => {
+    const { service, notifications } = await createService({
+      posts: {
+        findOneBy: vi.fn().mockResolvedValue({
+          id: 'post-id',
+          isDraft: false,
+          authorId: 'author-id',
+        }),
+      },
+    });
+
+    await service.like('post-id', 'user-id');
+
+    expect(notifications.notifyUser).toHaveBeenCalledWith(
+      'user-id',
+      'author-id',
+      NotificationType.LIKE,
+      'post-id',
+      null,
+    );
   });
 
   it('follows only published technical questions', async () => {

@@ -108,4 +108,23 @@ describe('AuthSessionService', () => {
     await expect(service.refresh(token)).rejects.toThrow();
     expect(sessions.update).not.toHaveBeenCalled();
   });
+
+  it('creates a short-lived token specifically for messaging sockets', async () => {
+    const jwtService = new JwtService({ secret });
+    const service = await createService(jwtService, {});
+
+    const result = await service.createSocketToken(
+      'user-id',
+      'user@example.test',
+    );
+    const payload = await jwtService.verifyAsync(result.token);
+
+    expect(result.expiresIn).toBe(60);
+    expect(payload).toMatchObject({
+      sub: 'user-id',
+      email: 'user@example.test',
+      tokenType: 'socket',
+    });
+    expect(payload.exp! - payload.iat!).toBe(60);
+  });
 });

@@ -7,6 +7,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { isUniqueViolation } from '../../../database/is-unique-violation.js';
 import type { AuthUser } from '../../../common/auth/auth-user.js';
+import { NotificationsService } from '../../notifications/application/notifications.service.js';
+import { NotificationType } from '../../notifications/infrastructure/notification.entity.js';
 import { UserEntity } from '../../users/infrastructure/user.entity.js';
 import { CommentSort, PostType } from '../domain/post.types.js';
 import type { PublicComment } from '../domain/post.types.js';
@@ -30,6 +32,7 @@ export class CommentsService {
     private readonly mentions: Repository<CommentMentionEntity>,
     @InjectRepository(UserEntity)
     private readonly users: Repository<UserEntity>,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async list(
@@ -111,7 +114,12 @@ export class CommentsService {
     if (comment.authorId !== user.id) throw new ForbiddenException();
     comment.content = input.content.trim();
     await this.comments.save(comment);
-    await this.syncMentions(comment.id, comment.content);
+    await this.syncMentions(
+      comment.id,
+      comment.content,
+      user.id,
+      comment.postId,
+    );
     const updated = await this.comments.findOneOrFail({
       where: { id: comment.id },
       relations: { author: true },
@@ -131,6 +139,10 @@ export class CommentsService {
     input: CreateCommentDto,
   ): Promise<PublicComment> {
     const parentCommentId = input.parentCommentId ?? null;
+    const post = await this.posts.findOneBy({ id: postId });
+    if (!post) throw this.postNotFound();
+    let recipientId = post.authorId;
+    let notificationType = NotificationType.COMMENT;
     if (parentCommentId) {
       const parent = await this.comments.findOneBy({
         id: parentCommentId,
@@ -142,6 +154,8 @@ export class CommentsService {
           message: 'Parent comment does not belong to this post.',
         });
       }
+      recipientId = parent.authorId;
+      notificationType = NotificationType.REPLY;
     }
     const comment = this.comments.create({
       postId,
@@ -150,7 +164,14 @@ export class CommentsService {
       content: input.content.trim(),
     });
     const saved = await this.comments.save(comment);
-    await this.syncMentions(saved.id, saved.content);
+    await this.notificationsService.notifyUser(
+      author.id,
+      recipientId,
+      notificationType,
+      postId,
+      saved.id,
+    );
+    await this.syncMentions(saved.id, saved.content, author.id, postId);
     const mapped = await this.comments.findOneOrFail({
       where: { id: saved.id },
       relations: { author: true },
@@ -207,8 +228,17 @@ export class CommentsService {
   private async syncMentions(
     commentId: string,
     content: string,
+    actorId: string,
+    postId: string,
   ): Promise<void> {
     const handles = extractMentionHandles(content);
+    const previousMentions = await this.mentions.find({
+      where: { commentId },
+      select: { userId: true },
+    });
+    const previousUserIds = new Set(
+      previousMentions.map((mention) => mention.userId),
+    );
     await this.mentions.delete({ commentId });
     if (handles.length === 0) return;
     const users = await this.users.find({
@@ -220,6 +250,14 @@ export class CommentsService {
         users.map((user) =>
           this.mentions.create({ commentId, userId: user.id }),
         ),
+      );
+      await this.notificationsService.notifyMentions(
+        actorId,
+        users
+          .filter((user) => !previousUserIds.has(user.id))
+          .map((user) => user.id),
+        postId,
+        commentId,
       );
     }
   }

@@ -10,6 +10,8 @@ import { In, Repository } from 'typeorm';
 import { isUniqueViolation } from '../../../database/is-unique-violation.js';
 import type { AuthUser } from '../../../common/auth/auth-user.js';
 import { MediaService } from '../../media/application/media.service.js';
+import { NotificationsService } from '../../notifications/application/notifications.service.js';
+import { NotificationType } from '../../notifications/infrastructure/notification.entity.js';
 import type { PublicPostMedia } from '../../media/domain/media.types.js';
 import { UserEntity } from '../../users/infrastructure/user.entity.js';
 import { UserFollowEntity } from '../../users/infrastructure/user-follow.entity.js';
@@ -51,6 +53,7 @@ export class PostsService {
     @InjectRepository(QuestionFollowEntity)
     private readonly questionFollows: Repository<QuestionFollowEntity>,
     private readonly mediaService: MediaService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async create(author: AuthUser, input: CreatePostDto): Promise<PublicPost> {
@@ -78,7 +81,14 @@ export class PostsService {
         post.id,
         input.attachmentIds ?? [],
       );
-      if (!post.isDraft) await this.syncMentions(post.id, post.content, post.codeSnippet);
+      if (!post.isDraft) {
+        await this.syncMentions(
+          post.id,
+          post.content,
+          post.codeSnippet,
+          author.id,
+        );
+      }
     } catch (error) {
       await this.posts.delete({ id: post.id });
       throw error;
@@ -181,7 +191,12 @@ export class PostsService {
       appendedAttachments,
     );
     if (!post.isDraft)
-      await this.syncMentions(post.id, post.content, post.codeSnippet);
+      await this.syncMentions(
+        post.id,
+        post.content,
+        post.codeSnippet,
+        user.id,
+      );
     return this.getById(post.id, user.id);
   }
 
@@ -195,7 +210,7 @@ export class PostsService {
     }
     post.isDraft = false;
     await this.posts.save(post);
-    await this.syncMentions(post.id, post.content, post.codeSnippet);
+    await this.syncMentions(post.id, post.content, post.codeSnippet, user.id);
     return this.getById(post.id, user.id);
   }
 
@@ -206,10 +221,21 @@ export class PostsService {
 
   async like(id: string, userId: string): Promise<{ liked: true }> {
     const post = await this.findPublishedPost(id);
+    let created = false;
     try {
       await this.likes.save(this.likes.create({ userId, postId: post.id }));
+      created = true;
     } catch (error) {
       if (!isUniqueViolation(error)) throw error;
+    }
+    if (created) {
+      await this.notificationsService.notifyUser(
+        userId,
+        post.authorId,
+        NotificationType.LIKE,
+        post.id,
+        null,
+      );
     }
     return { liked: true };
   }
@@ -360,8 +386,16 @@ export class PostsService {
     postId: string,
     content: string,
     codeSnippet: string | null,
+    actorId: string,
   ): Promise<void> {
     const handles = extractMentionHandles(`${content}\n${codeSnippet ?? ''}`);
+    const previousMentions = await this.mentions.find({
+      where: { postId },
+      select: { userId: true },
+    });
+    const previousUserIds = new Set(
+      previousMentions.map((mention) => mention.userId),
+    );
     await this.mentions.delete({ postId });
     if (handles.length === 0) return;
     const users = await this.users.find({
@@ -371,6 +405,14 @@ export class PostsService {
     if (users.length === 0) return;
     await this.mentions.save(
       users.map((user) => this.mentions.create({ postId, userId: user.id })),
+    );
+    await this.notificationsService.notifyMentions(
+      actorId,
+      users
+        .filter((user) => !previousUserIds.has(user.id))
+        .map((user) => user.id),
+      postId,
+      null,
     );
   }
 

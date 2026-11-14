@@ -71,10 +71,11 @@ export class MessagingGateway implements OnGatewayInit {
         next(new Error('API_KEY_INVALID'));
         return;
       }
-      let token: string | null =
+      const socketToken =
         typeof socket.handshake.auth?.token === 'string' && socket.handshake.auth.token.length > 0
           ? socket.handshake.auth.token
           : null;
+      let token = socketToken;
 
       if (!token && socket.handshake.headers?.cookie) {
         const cookies = parseCookies(socket.handshake.headers.cookie);
@@ -88,7 +89,11 @@ export class MessagingGateway implements OnGatewayInit {
       void this.jwtService
         .verifyAsync<AccessTokenPayload>(token)
         .then(async (payload) => {
-          if (!payload.sub || !payload.email) {
+          if (
+            !payload.sub ||
+            !payload.email ||
+            (socketToken && payload.tokenType !== 'socket')
+          ) {
             next(new Error('UNAUTHENTICATED'));
             return;
           }

@@ -1,6 +1,6 @@
 ﻿import { io, type Socket } from 'socket.io-client';
-import type { Author } from './api';
-import { FRONTEND_API_KEY, request, SOCKET_URL } from './api/client';
+import { api, type Author } from './api';
+import { FRONTEND_API_KEY, SOCKET_URL } from './api/client';
 
 // Contrat Socket.IO du namespace /messaging (docs/api-contracts.md du back).
 export interface Conversation {
@@ -28,9 +28,15 @@ export function getSocket(): Socket {
   if (!socket) {
     socket = io(`${SOCKET_URL}/messaging`, {
       auth: (callback) => {
-        void request('GET', '/users/me')
-          .catch(() => undefined)
-          .finally(() => callback({ apiKey: FRONTEND_API_KEY }));
+        void api
+          .socketToken()
+          .then(({ token }) => callback({ apiKey: FRONTEND_API_KEY, token }))
+          .catch((error: unknown) => {
+            if (import.meta.env.DEV) {
+              console.error('[Socket.IO] Unable to create a socket token', error);
+            }
+            callback({ apiKey: FRONTEND_API_KEY });
+          });
       },
       extraHeaders: { 'x-api-key': FRONTEND_API_KEY },
       withCredentials: true,

@@ -27,7 +27,7 @@ export function Notifications() {
         tabs={[
           ['all', 'Tout'],
           ['mentions', 'Mentions'],
-          ['projects', 'Projets'],
+          ['projects', 'Interactions'],
         ]}
       />
       {notifications.error ? (
@@ -40,7 +40,7 @@ export function Notifications() {
         </Empty>
       ) : items.length === 0 ? (
         <Empty icon="bell" title="Aucune notification" action={<Link to="/feed" className="btn">Retour au fil</Link>}>
-          {tab === 'projects' ? 'L’activité de tes projets apparaîtra ici.' : 'Quand quelqu’un te mentionne, tu le verras ici.'}
+          {tab === 'projects' ? 'Les likes, commentaires et réponses apparaîtront ici.' : 'Les mentions apparaîtront ici.'}
         </Empty>
       ) : (
         <div className="list">

@@ -6,4 +6,5 @@ export interface AuthUser {
 export interface AccessTokenPayload {
   sub: string;
   email: string;
+  tokenType?: 'socket' | 'refresh';
 }

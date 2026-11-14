@@ -22,7 +22,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   validate(payload: AccessTokenPayload): { id: string; email: string } {
-    if (!payload.sub || !payload.email) {
+    if (!payload.sub || !payload.email || payload.tokenType === 'socket') {
       throw new UnauthorizedException();
     }
     return { id: payload.sub, email: payload.email };

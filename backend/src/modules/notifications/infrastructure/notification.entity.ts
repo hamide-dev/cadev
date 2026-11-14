@@ -2,6 +2,9 @@ import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGenerat
 import { UserEntity } from '../../users/infrastructure/user.entity.js';
 
 export enum NotificationType {
+  LIKE = 'LIKE',
+  COMMENT = 'COMMENT',
+  REPLY = 'REPLY',
   MENTION = 'MENTION',
 }
 

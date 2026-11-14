@@ -21,6 +21,7 @@ export const api = {
   resendVerification: (email: string) => request<{ message: string }>('POST', '/auth/email/resend', { email }),
   login: (email: string, password: string) => request<AuthResponse>('POST', '/auth/login', { email, password }),
   logout: () => request<{ success: true }>('POST', '/auth/logout'),
+  socketToken: () => request<{ token: string; expiresIn: number }>('POST', '/auth/socket-token'),
   requestPasswordReset: (email: string) => request<{ message: string; email: string; expiresIn: number }>('POST', '/auth/password/forgot', { email }),
   resetPassword: (email: string, code: string, password: string) =>
     request<{ message: string }>('POST', '/auth/password/reset', { email, code, password }),

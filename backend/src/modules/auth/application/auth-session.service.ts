@@ -21,6 +21,11 @@ export interface RefreshedTokens {
   refreshToken: string;
 }
 
+export interface SocketToken {
+  token: string;
+  expiresIn: number;
+}
+
 @Injectable()
 export class AuthSessionService {
   constructor(
@@ -29,6 +34,15 @@ export class AuthSessionService {
     @InjectRepository(RefreshSessionEntity)
     private readonly sessions: Repository<RefreshSessionEntity>,
   ) {}
+
+  async createSocketToken(userId: string, email: string): Promise<SocketToken> {
+    const expiresIn = 60;
+    const token = await this.jwtService.signAsync(
+      { sub: userId, email, tokenType: 'socket' },
+      { expiresIn },
+    );
+    return { token, expiresIn };
+  }
 
   async createRefreshToken(accessToken: string): Promise<string> {
     const accessPayload =

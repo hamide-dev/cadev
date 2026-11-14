@@ -14,6 +14,9 @@ import type { Request, Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import { CurrentUser } from '../../../common/auth/current-user.decorator.js';
+import type { AuthUser } from '../../../common/auth/auth-user.js';
+import { JwtAuthGuard } from '../../../common/auth/jwt-auth.guard.js';
 import {
   AuthService,
   type AuthResponse,
@@ -219,6 +222,14 @@ export class AuthController {
     const tokens = await this.authSessionService.refresh(refreshToken);
     this.writeAuthCookies(response, tokens.accessToken, tokens.refreshToken);
     return { expiresIn: 24 * 60 * 60 };
+  }
+
+  @Post('socket-token')
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Create a short-lived token for messaging sockets' })
+  createSocketToken(@CurrentUser() user: AuthUser) {
+    return this.authSessionService.createSocketToken(user.id, user.email);
   }
 
   @Post('password/forgot')

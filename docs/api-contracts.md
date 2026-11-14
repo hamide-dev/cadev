@@ -118,6 +118,7 @@ pas renvoyé dans les réponses JSON.
 | `POST /auth/password/forgot`, `POST /auth/password/reset` | Non | e-mail puis code à 4 chiffres et nouveau mot de passe | Disponible ; code de réinitialisation valable 2 min. |
 | `GET /auth/google`, `GET /auth/google/callback` | OAuth | Redirection fournisseur puis redirection frontend avec cookie de session HttpOnly | Disponible si les identifiants OAuth sont configurés ; e-mail Google vérifié requis. |
 | `GET /auth/github`, `GET /auth/github/callback` | OAuth | Redirection fournisseur puis redirection frontend avec cookie de session HttpOnly | Disponible si les identifiants OAuth sont configurés ; e-mail principal GitHub vérifié requis. |
+| `POST /auth/socket-token` | Cookie `access_token` HttpOnly | → token Socket.IO éphémère valable 60 secondes | Disponible ; destiné uniquement à l'authentification du handshake de messagerie. |
 | `POST /auth/refresh`, `POST /auth/logout` | Cookie refresh HttpOnly | rotation/révocation → résultat | Disponible ; access token valable 1 jour, refresh token rotatif valable 2 jours. Le frontend renouvelle la session après un `401`. |
 | `GET /users/:username`, `GET/PATCH /users/me` | Lecture publique / authentifié | profil public / champs modifiables → profil public | Disponible ; profil développeur avec handle, spécialité, niveau, intérêts, technologies et URL GitHub ; champs sensibles exclus. |
 | `GET /users?search=...&page=...&limit=...` | Authentifié | recherche nom/pseudo et pagination → `{ items, page, limit, total, hasMore }` | Disponible ; n'inclut pas l'adresse e-mail ni le profil de la personne connectée ; 20 utilisateurs par défaut, 50 maximum. |
@@ -157,8 +158,10 @@ WebSocket.
 ## Contrats Socket.IO de messagerie
 
 Namespace : `/messaging`. Le client transmet le JWT d'application dans
-`auth.token` à la connexion Socket.IO ; la gateway valide le jeton et l'origine
-avant d'accepter la connexion. Les DTO des événements sont validés à réception.
+`auth.token` à la connexion Socket.IO ; en déploiement, il est obtenu via
+`POST /api/v1/auth/socket-token` afin de ne pas dépendre de l'envoi d'un cookie
+tiers. La gateway valide le jeton et l'origine avant d'accepter la connexion.
+Les DTO des événements sont validés à réception.
 
 | Événement entrant | Payload principal | Autorisation et résultat |
 |---|---|---|
