@@ -7,6 +7,7 @@ import { DataSource } from 'typeorm';
 // Chaque requête ici est idempotente : elle ne fait rien si le changement existe déjà.
 const IDEMPOTENT_CHANGES = [
   `ALTER TYPE "developer_specialty" ADD VALUE IF NOT EXISTS 'VIBE_CODING'`,
+  `ALTER TYPE "notification_type" ADD VALUE IF NOT EXISTS 'FOLLOW'`,
 ];
 
 @Injectable()

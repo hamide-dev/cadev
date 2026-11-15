@@ -31,21 +31,26 @@ function getNotificationMessage(
       return `${actor} a répondu à votre commentaire`;
     case NotificationType.MENTION:
       return `${actor} vous a mentionné`;
+    case NotificationType.FOLLOW:
+      return `${actor} s’est abonné à vous`;
     default:
       throw new Error(`Unsupported notification type: ${String(type)}`);
   }
 }
 
+// Texte affiché sous le nom de la personne, comme sur les réseaux sociaux.
 function getPushMessage(type: NotificationType): string {
   switch (type) {
     case NotificationType.LIKE:
-      return 'Quelqu’un a aimé votre publication.';
+      return 'a aimé ta publication ❤️';
     case NotificationType.COMMENT:
-      return 'Nouveau commentaire sur votre publication.';
+      return 'a commenté ta publication 💬';
     case NotificationType.REPLY:
-      return 'Nouvelle réponse à votre commentaire.';
+      return 'a répondu à ton commentaire 💬';
     case NotificationType.MENTION:
-      return 'Vous avez été mentionné.';
+      return 't’a mentionné @';
+    case NotificationType.FOLLOW:
+      return 's’est abonné à toi';
     default:
       throw new Error(`Unsupported notification type: ${String(type)}`);
   }
@@ -80,12 +85,15 @@ export class NotificationsService {
         }),
       ),
     );
+    const actor = await this.actorForPush(actorId);
     await Promise.all(
       recipients.map((recipientId) =>
         this.pushNotifications.sendToUser(recipientId, {
-          title: 'Hello World',
+          title: actor.name,
           body: getPushMessage(NotificationType.MENTION),
           url: postId ? `/post/${postId}` : '/notifications',
+          icon: actor.avatarUrl,
+          tag: postId ? `post-${postId}` : 'mention',
         }),
       ),
     );
@@ -109,11 +117,24 @@ export class NotificationsService {
         readAt: null,
       }),
     );
+    const actor = await this.actorForPush(actorId);
     await this.pushNotifications.sendToUser(recipientId, {
-      title: 'Hello World',
+      title: actor.name,
       body: getPushMessage(type),
-      url: postId ? `/post/${postId}` : '/notifications',
+      url: type === NotificationType.FOLLOW ? `/u/${actor.username}` : postId ? `/post/${postId}` : '/notifications',
+      icon: actor.avatarUrl,
+      tag: type === NotificationType.FOLLOW ? `follow-${actorId}` : postId ? `post-${postId}-${type.toLowerCase()}` : type.toLowerCase(),
     });
+  }
+
+  // Nom et photo de la personne à l'origine de la notification ; repli neutre si elle est introuvable.
+  private async actorForPush(actorId: string): Promise<{ name: string; username: string; avatarUrl: string | null }> {
+    try {
+      const actor = await this.users.findById(actorId);
+      return { name: actor.displayName, username: actor.username, avatarUrl: actor.avatarUrl };
+    } catch {
+      return { name: 'Hello World', username: '', avatarUrl: null };
+    }
   }
 
   async listForUser(userId: string): Promise<PublicNotification[]> {

@@ -4,6 +4,8 @@ import { Aside } from './Aside';
 import { Nav } from './Nav';
 import { InstallPrompt } from '../features/install/InstallPrompt';
 import { LightboxHost } from '../components/Lightbox';
+import { ToastHost } from '../components/Toast';
+import { NotificationPrompt } from '../features/notifications/NotificationPrompt';
 
 // Écrans principaux : la barre du bas n'apparaît que sur eux, sur mobile.
 const MAIN_SCREENS = /^\/(feed|explore|projects|notifications|messages)\/?$|^\/u\//;
@@ -30,6 +32,8 @@ export function Shell() {
       {layout === 'aside' && <Aside />}
       <InstallPrompt />
       <LightboxHost />
+      <NotificationPrompt />
+      <ToastHost />
     </div>
   );
 }

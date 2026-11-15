@@ -16,6 +16,10 @@ export interface PushMessage {
   title: string;
   body: string;
   url: string;
+  /** Photo de la personne à l'origine de la notification (affichée à gauche). */
+  icon?: string | null;
+  /** Même tag = la nouvelle notification remplace l'ancienne (une par conversation ou publication). */
+  tag?: string;
 }
 
 @Injectable()
@@ -50,7 +54,7 @@ export class PushNotificationsService {
     input: PushSubscriptionDto,
   ): Promise<{ subscribed: true }> {
     this.assertConfigured();
-    this.assertChromePushEndpoint(input.endpoint);
+    this.assertKnownPushEndpoint(input.endpoint);
     await this.subscriptions.upsert(
       {
         userId,
@@ -67,7 +71,7 @@ export class PushNotificationsService {
     userId: string,
     endpoint: string,
   ): Promise<{ unsubscribed: true }> {
-    this.assertChromePushEndpoint(endpoint);
+    this.assertKnownPushEndpoint(endpoint);
     await this.subscriptions.delete({ userId, endpoint });
     return { unsubscribed: true };
   }
@@ -123,20 +127,23 @@ export class PushNotificationsService {
     }
   }
 
-  private assertChromePushEndpoint(endpoint: string): void {
+  // Seuls les services push officiels des navigateurs sont acceptés (le serveur n'envoie jamais
+  // de requête vers une adresse choisie librement) : Chrome / Android, Safari / iPhone, Firefox, Edge.
+  private assertKnownPushEndpoint(endpoint: string): void {
     let url: URL;
     try {
       url = new URL(endpoint);
     } catch {
       throw this.invalidEndpoint();
     }
-    if (
-      url.protocol !== 'https:' ||
-      url.hostname !== 'fcm.googleapis.com' ||
-      url.port ||
-      url.username ||
-      url.password
-    ) {
+    const host = url.hostname;
+    const known =
+      host === 'fcm.googleapis.com' ||
+      host === 'web.push.apple.com' ||
+      host.endsWith('.push.apple.com') ||
+      host === 'updates.push.services.mozilla.com' ||
+      host.endsWith('.notify.windows.com');
+    if (url.protocol !== 'https:' || !known || url.port || url.username || url.password) {
       throw this.invalidEndpoint();
     }
   }

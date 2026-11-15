@@ -22,7 +22,10 @@ describe('NotificationsService push delivery', () => {
       providers: [
         NotificationsService,
         { provide: getRepositoryToken(NotificationEntity), useValue: notifications },
-        { provide: UsersService, useValue: {} },
+        {
+          provide: UsersService,
+          useValue: { findById: vi.fn().mockResolvedValue({ displayName: 'Awa Diop', username: 'awacodes', avatarUrl: 'https://img.test/awa.jpg' }) },
+        },
         { provide: PushNotificationsService, useValue: pushNotifications },
       ],
     }).compile();
@@ -30,27 +33,32 @@ describe('NotificationsService push delivery', () => {
   });
 
   it.each([
-    [NotificationType.LIKE, 'Quelqu’un a aimé votre publication.'],
-    [NotificationType.COMMENT, 'Nouveau commentaire sur votre publication.'],
-    [NotificationType.REPLY, 'Nouvelle réponse à votre commentaire.'],
-    [NotificationType.MENTION, 'Vous avez été mentionné.'],
-  ])('pushes %s notifications to the recipient', async (type, body) => {
-    await service.notifyUser(
-      'actor-id',
-      'recipient-id',
-      type,
-      'post-id',
-      'comment-id',
-    );
+    [NotificationType.LIKE, 'a aimé ta publication ❤️', 'post-post-id-like'],
+    [NotificationType.COMMENT, 'a commenté ta publication 💬', 'post-post-id-comment'],
+    [NotificationType.REPLY, 'a répondu à ton commentaire 💬', 'post-post-id-reply'],
+    [NotificationType.MENTION, 't’a mentionné @', 'post-post-id-mention'],
+  ])('pushes %s notifications with the actor name and photo', async (type, body, tag) => {
+    await service.notifyUser('actor-id', 'recipient-id', type, 'post-id', 'comment-id');
 
-    expect(pushNotifications.sendToUser).toHaveBeenCalledWith(
-      'recipient-id',
-      {
-        title: 'Hello World',
-        body,
-        url: '/post/post-id',
-      },
-    );
+    expect(pushNotifications.sendToUser).toHaveBeenCalledWith('recipient-id', {
+      title: 'Awa Diop',
+      body,
+      url: '/post/post-id',
+      icon: 'https://img.test/awa.jpg',
+      tag,
+    });
+  });
+
+  it('pushes FOLLOW notifications that open the follower profile', async () => {
+    await service.notifyUser('actor-id', 'recipient-id', NotificationType.FOLLOW, null, null);
+
+    expect(pushNotifications.sendToUser).toHaveBeenCalledWith('recipient-id', {
+      title: 'Awa Diop',
+      body: 's’est abonné à toi',
+      url: '/u/awacodes',
+      icon: 'https://img.test/awa.jpg',
+      tag: 'follow-actor-id',
+    });
   });
 
   it('does not send a push notification for a self-action', async () => {

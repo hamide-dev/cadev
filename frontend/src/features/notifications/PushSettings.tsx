@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api, ApiError } from '../../lib/api';
 import { errorMessage } from '../../lib/format';
-import type { PushSubscriptionInput } from '../../lib/api/types';
+import { decodeVapidPublicKey, toPushSubscriptionInput } from '../../lib/push';
 
 type PushState =
   | 'loading'
@@ -166,30 +166,6 @@ export function PushSettings() {
       )}
     </div>
   );
-}
-
-function toPushSubscriptionInput(
-  subscription: PushSubscription,
-): PushSubscriptionInput {
-  const json = subscription.toJSON();
-  if (!json.endpoint || !json.keys?.p256dh || !json.keys.auth) {
-    throw new Error('L’abonnement du navigateur est incomplet.');
-  }
-  return {
-    endpoint: json.endpoint,
-    keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
-  };
-}
-
-function decodeVapidPublicKey(publicKey: string): ArrayBuffer {
-  const base64 = publicKey.replace(/-/g, '+').replace(/_/g, '/');
-  const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=');
-  const decoded = Uint8Array.from(window.atob(padded), (character) =>
-    character.charCodeAt(0),
-  );
-  const buffer = new ArrayBuffer(decoded.length);
-  new Uint8Array(buffer).set(decoded);
-  return buffer;
 }
 
 function isPushUnavailable(error: unknown): boolean {

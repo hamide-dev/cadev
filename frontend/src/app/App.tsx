@@ -1,5 +1,6 @@
+import { useEffect, useState } from 'react';
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
-import { LogoMark } from '../components/Brand';
+import { AnimatedLogo } from '../components/AnimatedLogo';
 import { AuthLayout } from '../features/auth/AuthLayout';
 import { Login } from '../features/auth/Login';
 import { OAuthCallback } from '../features/auth/OAuthCallback';
@@ -29,12 +30,43 @@ import { Shell } from './Shell';
 function Splash() {
   return (
     <main className="splash" role="status" aria-label="Chargement de Hello World">
-      <LogoMark size={96} />
+      <AnimatedLogo size={120} replay />
       <p className="mono">
         Hello World&gt;<span className="cursor">_</span>
       </p>
-      <span className="spinner" />
     </main>
+  );
+}
+
+// Ouverture de l'app : l'animation du logo joue une fois par session, par-dessus l'app qui se charge derrière.
+// Un toucher la passe ; elle ne s'affiche pas si l'utilisateur a demandé moins d'animations.
+const INTRO_KEY = 'hw.intro.seen';
+function Intro() {
+  const [phase, setPhase] = useState<'show' | 'leave' | 'done'>(() => {
+    try {
+      if (sessionStorage.getItem(INTRO_KEY) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return 'done';
+      sessionStorage.setItem(INTRO_KEY, '1');
+    } catch {
+      return 'done';
+    }
+    return 'show';
+  });
+  useEffect(() => {
+    if (phase !== 'show') return;
+    const leave = setTimeout(() => setPhase('leave'), 2100);
+    return () => clearTimeout(leave);
+  }, [phase]);
+  useEffect(() => {
+    if (phase !== 'leave') return;
+    const done = setTimeout(() => setPhase('done'), 320);
+    return () => clearTimeout(done);
+  }, [phase]);
+  if (phase === 'done') return null;
+  return (
+    <div className={`intro ${phase === 'leave' ? 'is-leaving' : ''}`} onClick={() => setPhase('leave')} aria-hidden="true">
+      <AnimatedLogo size={140} replay />
+      <p className="mono">Hello World&gt;<span className="cursor">_</span></p>
+    </div>
   );
 }
 
@@ -47,6 +79,8 @@ export function App() {
   const { ready, user } = useSession();
   if (!ready) return <Splash />;
   return (
+    <>
+    <Intro />
     <Routes>
       <Route path="/" element={<Navigate to={user ? '/feed' : '/welcome'} replace />} />
       <Route path="/oauth/callback" element={<OAuthCallback />} />
@@ -82,5 +116,6 @@ export function App() {
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>
+    </>
   );
 }
