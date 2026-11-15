@@ -6,11 +6,12 @@ import { RepoCard } from '../../components/RepoCard';
 import { firstUrl, RichText } from './RichText';
 import { LinkPreviewCard } from '../messages/LinkPreviewCard';
 import { CodeBlock } from './CodeBlock';
+import { PhotoMosaic } from './PhotoMosaic';
 import { api, type Post } from '../../lib/api';
 import { errorMessage, findRepoUrl, timeAgo } from '../../lib/format';
 import { useSession } from '../../lib/session';
 import { isSaved, toggleSaved, useSaved } from '../../lib/saved';
-import { openLightbox } from '../../components/Lightbox';
+import { Video } from '../../components/Video';
 
 const TYPE_LABEL: Record<Post['type'], string | null> = { QUESTION: 'Question', PROJECT_LAUNCH: 'Projet', ARTICLE: null };
 
@@ -22,6 +23,10 @@ export function PostCard({ post, onChange, onDelete, linked = true }: { post: Po
   const repo = findRepoUrl(post.content);
   const mine = user?.id === post.author.id;
   const typeLabel = TYPE_LABEL[post.type];
+  const videos = post.attachments.filter((media) => media.resourceType === 'video');
+  const photos = post.attachments
+    .filter((media) => media.resourceType !== 'video')
+    .map((media, index, all) => ({ src: media.url, alt: `Image ${all.length > 1 ? `${index + 1} ` : ''}de ${post.author.displayName}` }));
   const saved = isSaved(useSaved(), post.id);
   const [copied, setCopied] = useState(false);
 
@@ -150,19 +155,14 @@ export function PostCard({ post, onChange, onDelete, linked = true }: { post: Po
             ))}
           </div>
         )}
-        {post.attachments.length > 0 && (
+        {videos.length > 0 && (
           <div className="media-grid">
-            {post.attachments.map((media) =>
-              media.resourceType === 'video' ? (
-                <video key={media.id} src={media.url} controls playsInline preload="metadata" />
-              ) : (
-                <button key={media.id} type="button" className="media-open" aria-label="Agrandir l’image" onClick={() => openLightbox({ src: media.url, alt: `Image de ${post.author.displayName}` })}>
-                  <img src={media.url} alt="" loading="lazy" />
-                </button>
-              ),
-            )}
+            {videos.map((media) => (
+              <Video key={media.id} id={media.id} src={media.url} />
+            ))}
           </div>
         )}
+        {photos.length > 0 && <PhotoMosaic photos={photos} />}
         {repo ? <RepoCard url={repo} /> : firstUrl(post.content) && <LinkPreviewCard url={firstUrl(post.content)!} />}
         <div className="post-actions">
           <Link to={`/post/${post.id}`} className="action" aria-label={post.type === 'QUESTION' ? 'Voir les réponses' : 'Voir les commentaires'}>

@@ -9,6 +9,7 @@ export interface Conversation {
   name: string | null;
   members: Array<Pick<Author, 'id' | 'username' | 'displayName' | 'avatarUrl'>>;
   unreadCount: number;
+  lastMessage: { senderId: string; senderName: string; type: 'TEXT' | 'CODE' | 'LINK' | 'MEDIA'; content: string; createdAt: string } | null;
   createdAt: string;
 }
 

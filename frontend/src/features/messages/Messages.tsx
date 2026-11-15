@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useMatch, useNavigate } from 'react-router-dom';
 import { Avatar } from '../../components/Avatar';
 import { Icon } from '../../components/Icon';
 import { Empty, ErrorState, Loading } from '../../components/states';
 import { TopBar } from '../../components/TopBar';
 import { useMe } from '../../lib/session';
-import { emit, type Conversation } from '../../lib/socket';
+import { emit, getSocket, type Conversation } from '../../lib/socket';
+import { timeAgo } from '../../lib/format';
 import { useLoad } from '../../lib/useLoad';
-import { conversationSubtitle, conversationTitle } from './format';
+import { conversationPreview, conversationTitle } from './format';
 import { NewConversation } from './NewConversation';
 
 // Mobile : la liste, puis la conversation en plein écran.
@@ -39,6 +40,14 @@ function ConversationList({ openId }: { openId?: string }) {
   const [creating, setCreating] = useState(false);
   // Rechargée quand on ouvre une conversation, pour voir apparaître celles qu'on vient de créer.
   const { data, error, loading, reload } = useLoad(() => emit<Conversation[]>('conversation:list'), [openId]);
+
+  // Un message arrive ou une conversation est lue : la liste se met à jour (aperçu, non-lus, ordre).
+  useEffect(() => {
+    const socket = getSocket();
+    const events = ['message:unread', 'message:created', 'conversation:read'];
+    events.forEach((event) => socket.on(event, reload));
+    return () => events.forEach((event) => socket.off(event, reload));
+  }, [reload]);
 
   const q = query.trim().toLowerCase();
   const shown = (data ?? []).filter((c) => !q || conversationTitle(c, me.id).toLowerCase().includes(q));
@@ -98,11 +107,18 @@ function ConversationList({ openId }: { openId?: string }) {
                 ) : (
                   <Avatar user={{ ...(c.members.find((m) => m.id !== me.id) ?? c.members[0]!), avatarUrl: (c.members.find((m) => m.id !== me.id) ?? c.members[0]!).avatarUrl ?? null }} link={false} />
                 )}
-                <div className="grow">
-                  <p className="strong">{conversationTitle(c, me.id)}</p>
-                  <p className="xs muted">{conversationSubtitle(c, me.id)}</p>
+                <div className="grow conv-text">
+                  <p className={c.unreadCount > 0 ? 'strong' : undefined}>{conversationTitle(c, me.id)}</p>
+                  <p className={`xs conv-preview ${c.unreadCount > 0 ? 'unread' : 'muted'}`}>{conversationPreview(c, me.id)}</p>
                 </div>
-                <Icon name="chevron" size={20} />
+                <div className="conv-meta">
+                  {c.lastMessage && <span className="xs muted">{timeAgo(c.lastMessage.createdAt)}</span>}
+                  {c.unreadCount > 0 && (
+                    <span className="unread-badge" aria-label={`${c.unreadCount} message${c.unreadCount > 1 ? 's' : ''} non lu${c.unreadCount > 1 ? 's' : ''}`}>
+                      {c.unreadCount > 99 ? '99+' : c.unreadCount}
+                    </span>
+                  )}
+                </div>
               </NavLink>
             ))}
             {shown.length === 0 && <p className="center small muted" style={{ padding: 24 }}>Aucune conversation ne correspond à « {query} ».</p>}
