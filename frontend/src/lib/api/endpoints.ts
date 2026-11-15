@@ -84,6 +84,7 @@ export const api = {
   confirmPost: (publicId: string, resourceType: 'image' | 'video') =>
     request<Media>('POST', '/media/posts/confirm', { publicId, resourceType }),
   notifications: () => request<Notification[]>('GET', '/notifications'),
+  markNotificationsRead: () => request<{ updated: number }>('PATCH', '/notifications/read-all'),
   pushConfiguration: () => request<PushConfiguration>('GET', '/notifications/push/config'),
   savePushSubscription: (input: PushSubscriptionInput) =>
     request<{ subscribed: true }>('POST', '/notifications/push-subscription', input),

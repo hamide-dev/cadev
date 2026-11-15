@@ -207,3 +207,22 @@
 }
 .aside-link.row { flex-direction: row; align-items: center; }
 .aside-link:hover { background: var(--surface-2); }
+
+/* ---------- Bouton Publier flottant sur mobile ---------- */
+@media (max-width: 767px) {
+  .has-mobile-nav .nav-publish {
+    display: inline-flex;
+    position: fixed;
+    right: var(--space-4);
+    bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + var(--space-4));
+    width: 56px; height: 56px; padding: 0;
+    border-radius: var(--radius-full);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  }
+}
+
+/* Barre latérale : l'onglet actif porte un repère de couleur */
+@media (min-width: 1200px) {
+  .nav-item.active { box-shadow: inset 3px 0 0 var(--accent); }
+  .shell-focus { grid-template-columns: 264px minmax(0, 680px); }
+}

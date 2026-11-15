@@ -36,7 +36,7 @@ describe('BrevoEmailService', () => {
     expect(sentPayload()).toMatchObject({
       sender: { name: 'Test sender', email: 'sender@example.test' },
       to: [{ email: 'user@example.test' }],
-      subject: 'Confirmez votre adresse e-mail',
+      subject: 'Confirme ton adresse e-mail · Hello World',
       textContent: expect.stringContaining('1234'),
     });
   });
@@ -51,9 +51,9 @@ describe('BrevoEmailService', () => {
     );
 
     expect(sentPayload()).toMatchObject({
-      subject: 'Votre code de réinitialisation Hello World',
+      subject: 'Ton code de réinitialisation Hello World',
       textContent: expect.stringMatching(
-        /réinitialisation de votre mot de passe.*expire dans 2 minutes/,
+        /réinitialisation de ton mot de passe.*expire dans 2 minutes/,
       ),
       htmlContent: expect.stringContaining(
         'expire dans <strong style="color:#ffffff;">2 minutes</strong>',

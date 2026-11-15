@@ -15,7 +15,9 @@ export function Shell() {
   const { pathname } = useLocation();
   if (!user) return <Navigate to="/welcome" replace />;
 
-  const layout = pathname.startsWith('/messages') ? 'full' : pathname === '/projects' ? 'wide' : 'aside';
+  // La colonne de suggestions n'apparaît que là où elle aide à découvrir : pas pendant qu'on écrit ou règle son compte.
+  const focus = /^\/(publish|settings|profile\/edit|signup\/oauth)/.test(pathname);
+  const layout = pathname.startsWith('/messages') ? 'full' : pathname === '/projects' ? 'wide' : focus ? 'focus' : 'aside';
   return (
     <div className={`shell shell-${layout} ${MAIN_SCREENS.test(pathname) ? 'has-mobile-nav' : ''}`}>
       <Nav />

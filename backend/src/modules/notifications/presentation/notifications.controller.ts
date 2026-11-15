@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -30,6 +31,11 @@ export class NotificationsController {
   @Get()
   list(@CurrentUser() user: AuthUser) {
     return this.notifications.listForUser(user.id);
+  }
+
+  @Patch('read-all')
+  markAllRead(@CurrentUser() user: AuthUser) {
+    return this.notifications.markAllRead(user.id);
   }
 
   @Get('push/config')

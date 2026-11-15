@@ -8,8 +8,9 @@ import { CodeBlock } from './CodeBlock';
 import { api, type Post } from '../../lib/api';
 import { errorMessage, findRepoUrl, timeAgo } from '../../lib/format';
 import { useSession } from '../../lib/session';
+import { isSaved, toggleSaved, useSaved } from '../../lib/saved';
 
-const TYPE_LABEL: Record<Post['type'], string | null> = { QUESTION: '? Question technique', PROJECT_LAUNCH: 'Projet', ARTICLE: null };
+const TYPE_LABEL: Record<Post['type'], string | null> = { QUESTION: 'Question', PROJECT_LAUNCH: 'Projet', ARTICLE: null };
 
 export function PostCard({ post, onChange, onDelete, linked = true }: { post: Post; onChange?: (post: Post) => void; onDelete?: (id: string) => void; linked?: boolean }) {
   const { user } = useSession();
@@ -19,6 +20,22 @@ export function PostCard({ post, onChange, onDelete, linked = true }: { post: Po
   const repo = findRepoUrl(post.content);
   const mine = user?.id === post.author.id;
   const typeLabel = TYPE_LABEL[post.type];
+  const saved = isSaved(useSaved(), post.id);
+  const [copied, setCopied] = useState(false);
+
+  const share = async () => {
+    const url = `${location.origin}/post/${post.id}`;
+    try {
+      if (navigator.share) await navigator.share({ title: `${post.author.displayName} sur Hello World`, url });
+      else {
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1800);
+      }
+    } catch {
+      // Partage annulé par l'utilisateur.
+    }
+  };
 
   const toggleLike = async () => {
     if (!user) return navigate('/login');
@@ -112,7 +129,10 @@ export function PostCard({ post, onChange, onDelete, linked = true }: { post: Po
         )}
         {(typeLabel || post.tags.length > 0) && (
           <div className="tags">
-            <span className="tag outline">{[typeLabel, ...post.tags].filter(Boolean).join(' · ')}</span>
+            {typeLabel && <span className={`tag type-${post.type.toLowerCase()}`}>{typeLabel}</span>}
+            {post.tags.map((tag) => (
+              <span key={tag} className="tag grey">#{tag}</span>
+            ))}
           </div>
         )}
         {post.attachments.length > 0 && (
@@ -136,6 +156,14 @@ export function PostCard({ post, onChange, onDelete, linked = true }: { post: Po
           <button type="button" className="action" aria-pressed={!!post.likedByMe} onClick={toggleLike} aria-label={post.likedByMe ? "Retirer le j'aime" : "J'aime"}>
             <Icon name="heart" size={20} />
             {post.likeCount}
+          </button>
+          <span className="grow" />
+          <button type="button" className="action" aria-pressed={saved} data-kind="save" onClick={() => toggleSaved(post)} aria-label={saved ? 'Retirer des sauvegardes' : 'Sauvegarder'}>
+            <Icon name="bookmark" size={20} />
+          </button>
+          <button type="button" className="action" onClick={share} aria-label="Partager la publication">
+            <Icon name={copied ? 'check' : 'share'} size={20} />
+            {copied && <span className="xs">Lien copié</span>}
           </button>
         </div>
       </div>

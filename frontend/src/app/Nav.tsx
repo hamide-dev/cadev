@@ -47,6 +47,7 @@ export function Nav() {
     };
   }, [pathname]);
 
+  // Recompté à chaque changement d'écran, remis à zéro dès que l'écran Notifications les marque comme lues.
   useEffect(() => {
     let active = true;
     void api.notifications().then((items) => {
@@ -56,17 +57,20 @@ export function Nav() {
     }).catch(() => {
       if (active) setNotificationCount(0);
     });
+    const reset = () => setNotificationCount(0);
+    window.addEventListener('hw:notifications-read', reset);
     return () => {
       active = false;
+      window.removeEventListener('hw:notifications-read', reset);
     };
-  }, []);
+  }, [pathname]);
 
   return (
     <nav className="nav" aria-label="Navigation principale">
-      <div className="nav-brand">
+      <Link to="/feed" className="nav-brand" aria-label="Hello World, retour au fil">
         <LogoMark size={36} />
         <span className="nav-text mono">Hello World</span>
-      </div>
+      </Link>
       {NAV.map((item) => (
         <NavLink key={item.to} to={item.to} className="nav-item">
           <Icon name={item.icon} />
@@ -76,10 +80,13 @@ export function Nav() {
           {item.to === '/messages' && messageCount > 0 && <span className="nav-badge" aria-label={`${messageCount} message${messageCount > 1 ? 's' : ''} non lu${messageCount > 1 ? 's' : ''}`}>{messageCount > 99 ? '99+' : messageCount}</span>}
         </NavLink>
       ))}
-      <Link to="/publish" className="btn btn-primary nav-publish" aria-label="Publier">
-        <Icon name="plus" size={20} />
-        <span className="nav-text">Publier</span>
-      </Link>
+      {/* Un seul bouton Publier : caché quand on est déjà sur l'écran de publication. */}
+      {pathname !== '/publish' && (
+        <Link to="/publish" className="btn btn-primary nav-publish" aria-label="Publier">
+          <Icon name="plus" size={22} />
+          <span className="nav-text">Publier</span>
+        </Link>
+      )}
       <NavLink to={`/u/${me.username}`} className="nav-me" aria-label="Mon profil">
         <Avatar user={me} size="s" link={false} />
         <span className="nav-text grow">

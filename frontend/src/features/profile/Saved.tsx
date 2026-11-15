@@ -1,15 +1,20 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Tabs } from '../../components/Tabs';
 import { TopBar } from '../../components/TopBar';
 import { Empty } from '../../components/states';
+import { PostCard } from '../posts/PostCard';
+import { useSaved } from '../../lib/saved';
 
-const SOON = 'Le serveur ne fournit pas encore cette fonctionnalité. Cet écran se remplira dès qu’elle sera disponible.';
+const FILTERS = { all: null, posts: 'ARTICLE', questions: 'QUESTION', projects: 'PROJECT_LAUNCH' } as const;
 
 export function Saved() {
-  const [tab, setTab] = useState<'all' | 'posts' | 'questions' | 'projects'>('all');
+  const [tab, setTab] = useState<keyof typeof FILTERS>('all');
+  const saved = useSaved();
+  const items = saved.filter((post) => !FILTERS[tab] || post.type === FILTERS[tab]);
   return (
     <main className="screen">
-      <TopBar back title="Sauvegardes" sub="Retour au profil" />
+      <TopBar back title="Sauvegardes" sub={`${saved.length} élément${saved.length > 1 ? 's' : ''} gardé${saved.length > 1 ? 's' : ''}`} />
       <Tabs
         label="Filtrer les sauvegardes"
         value={tab}
@@ -21,9 +26,13 @@ export function Saved() {
           ['projects', 'Projets'],
         ]}
       />
-      <Empty icon="bookmark" title="Les sauvegardes arrivent bientôt">
-        {SOON}
-      </Empty>
+      {items.length ? (
+        items.map((post) => <PostCard key={post.id} post={post} />)
+      ) : (
+        <Empty icon="bookmark" title="Rien de sauvegardé ici" action={<Link to="/feed" className="btn btn-primary">Parcourir le fil</Link>}>
+          Touche l’icône signet sous une publication pour la retrouver ici plus tard.
+        </Empty>
+      )}
     </main>
   );
 }

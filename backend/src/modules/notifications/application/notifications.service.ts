@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import type { PublicUser } from '../../users/domain/user.types.js';
 import { UsersService } from '../../users/application/users.service.js';
 import { NotificationEntity, NotificationType } from '../infrastructure/notification.entity.js';
@@ -136,5 +136,13 @@ export class NotificationsService {
       readAt: notification.readAt?.toISOString() ?? null,
       createdAt: notification.createdAt.toISOString(),
     }));
+  }
+
+  async markAllRead(userId: string): Promise<{ updated: number }> {
+    const result = await this.notifications.update(
+      { recipientId: userId, readAt: IsNull() },
+      { readAt: new Date() },
+    );
+    return { updated: result.affected ?? 0 };
   }
 }

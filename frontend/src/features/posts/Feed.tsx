@@ -1,12 +1,42 @@
 import { useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Avatar } from '../../components/Avatar';
+import { Icon } from '../../components/Icon';
 import { LogoMark } from '../../components/Brand';
 import { Tabs } from '../../components/Tabs';
 import { Empty } from '../../components/states';
 import { PostFeed } from './PostFeed';
 import { api } from '../../lib/api';
 import { useMe } from '../../lib/session';
+
+// Raccourcis de publication : on choisit le type en un clic depuis le fil.
+const QUICK = [
+  { type: 'question', label: 'Question', icon: 'chat' },
+  { type: 'article', label: 'Code', icon: 'code', code: true },
+  { type: 'project_launch', label: 'Projet', icon: 'branch' },
+];
+
+export function QuickCompose() {
+  const me = useMe();
+  const firstName = me.displayName.split(' ')[0];
+  return (
+    <section className="quick-compose" aria-label="Publier">
+      <Avatar user={me} link={false} />
+      <div className="grow stack-s">
+        <Link to="/publish" className="quick-compose-input">
+          Quoi de neuf dans ton code, {firstName} ?
+        </Link>
+        <div className="quick-compose-actions">
+          {QUICK.map((q) => (
+            <Link key={q.label} to={`/publish?type=${q.type}${q.code ? '&code=1' : ''}`} className="chip-action">
+              <Icon name={q.icon} size={16} /> {q.label}
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export function Feed() {
   const me = useMe();
@@ -22,12 +52,12 @@ export function Feed() {
         </span>
         <div className="grow mobile-only">
           <span className="topbar-logo">
-            <LogoMark size={44} />
+            <LogoMark size={40} />
           </span>
         </div>
         <h1 className="grow desktop-only">Fil d’actualité</h1>
-        <Link to="/publish" className="btn btn-primary mobile-only">
-          Publier
+        <Link to="/explore" className="icon-btn mobile-only" aria-label="Rechercher">
+          <Icon name="search" />
         </Link>
       </header>
       <Tabs
@@ -39,29 +69,18 @@ export function Feed() {
         value={tab}
         onChange={(value) => setParams(value === 'following' ? { tab: value } : {})}
       />
-      {tab === 'for-you' && (
-        <p className="row xs muted section" style={{ gap: 6 }}>
-          Toutes les publications publiques de la communauté
-        </p>
-      )}
+      <QuickCompose />
       <PostFeed
         key={tab}
+        cacheKey={`feed:${tab}`}
         load={load}
         empty={
           tab === 'following' ? (
-            <Empty icon="search" title="Tu ne suis encore personne" action={<Link to="/explore" className="btn">Découvrir des développeurs</Link>}>
+            <Empty icon="search" title="Tu ne suis encore personne" action={<Link to="/explore" className="btn btn-primary">Découvrir des développeurs</Link>}>
               Abonne-toi à des développeurs pour retrouver ici leurs publications, dans l'ordre chronologique.
             </Empty>
           ) : (
-            <Empty
-              icon="home"
-              title="Ton fil est encore calme"
-              action={
-                <Link to="/publish" className="btn btn-primary mobile-only">
-                  Écrire la première publication
-                </Link>
-              }
-            >
+            <Empty icon="home" title="Ton fil est encore calme" action={<Link to="/publish" className="btn btn-primary">Écrire la première publication</Link>}>
               Publie quelque chose pour lancer la conversation.
             </Empty>
           )

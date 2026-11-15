@@ -444,3 +444,36 @@ a.list-item:hover, button.list-item:hover { background: var(--surface); }
   .notfound-actions .btn-block { width: auto; padding: 0 var(--space-6); }
 }
 @media (prefers-reduced-motion: reduce) { .cursor { animation: none; } }
+
+/* ---------- Finitions CADEV : composer rapide, actions, badges ---------- */
+.ellipsis { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.btn.pill { border-radius: var(--radius-full); }
+
+/* Zone « Quoi de neuf ? » en tête du fil */
+.quick-compose { display: flex; gap: var(--space-3); padding: var(--space-4); border-bottom: 1px solid var(--line); }
+.quick-compose-input {
+  display: flex; align-items: center;
+  min-height: 48px; padding: 0 var(--space-4);
+  border: 1px solid var(--border); border-radius: var(--radius-full);
+  background: var(--surface); color: var(--text-3);
+  font-size: 15px; text-decoration: none;
+  transition: border-color 150ms var(--ease), color 150ms var(--ease);
+}
+.quick-compose-input:hover { border-color: var(--border-input); color: var(--text-2); }
+.quick-compose-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.chip-action {
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: 36px; padding: 0 var(--space-3);
+  border-radius: var(--radius-full);
+  color: var(--text-2); font-size: 13px; font-weight: 500; text-decoration: none;
+}
+.chip-action svg { color: var(--accent); }
+.chip-action:hover { background: var(--surface); color: var(--text); }
+
+/* Publications : survol discret, badges de type lisibles */
+.post { transition: background-color 150ms var(--ease); }
+.post:hover { background: rgba(255, 255, 255, 0.015); }
+.post-actions { gap: var(--space-2); }
+.action[data-kind='save'][aria-pressed='true'] { color: var(--accent); }
+.tag.type-question { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
+.tag.type-project_launch { background: var(--success-bg); color: var(--success); font-weight: 600; }
