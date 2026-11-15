@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Avatar } from '../../components/Avatar';
 import { Icon } from '../../components/Icon';
@@ -9,6 +9,10 @@ import { api, type Media, type PostType, uploadPostToCloudinary } from '../../li
 import { errorMessage, findRepoUrl, INTERESTS, roleLine } from '../../lib/format';
 import { useMe } from '../../lib/session';
 import { useLoad } from '../../lib/useLoad';
+
+// Limite du back (ArrayMaxSize(5) sur attachmentIds).
+const MAX_MEDIA = 5;
+type Pending = { key: string; preview: string; video: boolean };
 
 const COMPOSE_TABS: Array<[PostType, string]> = [
   ['ARTICLE', 'Publication'],
@@ -27,7 +31,11 @@ export function Compose() {
   const [repo, setRepo] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [media, setMedia] = useState<Media[]>([]);
-  const [uploading, setUploading] = useState(false);
+  const [pending, setPending] = useState<Pending[]>([]);
+  const uploading = pending.length > 0;
+  // Aperçu local gardé après l'envoi : la photo ne clignote pas en vide le temps que Cloudinary la renvoie.
+  const previews = useRef(new Map<string, string>());
+  useEffect(() => () => previews.current.forEach((url) => URL.revokeObjectURL(url)), []);
   const [busy, setBusy] = useState<'draft' | 'publish' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [savedDraft, setSavedDraft] = useState(false);
@@ -36,17 +44,25 @@ export function Compose() {
   const repoUrl = repo.trim() ? findRepoUrl(repo.trim().startsWith('http') ? repo.trim() : `https://${repo.trim()}`) : null;
   const topics = [...new Set([...me.interests, ...me.technologies, ...INTERESTS])];
 
-  const attach = async (file: File) => {
-    setUploading(true);
-    setError(null);
-    try {
-      const kind = file.type.startsWith('video/') ? 'video' : 'image';
-      const confirmed = await uploadPostToCloudinary(kind, file);
-      setMedia((m) => [...m, confirmed]);
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setUploading(false);
+  // Plusieurs fichiers d'un coup : chacun apparaît tout de suite dans l'aperçu, puis part vers Cloudinary l'un après l'autre.
+  const attach = async (files: File[]) => {
+    const room = MAX_MEDIA - media.length - pending.length;
+    const kept = files.slice(0, Math.max(room, 0));
+    const dropped = files.length - kept.length;
+    setError(dropped > 0 ? `${MAX_MEDIA} photos ou vidéos au maximum : ${dropped === 1 ? 'la dernière n’a pas été ajoutée' : `les ${dropped} dernières n’ont pas été ajoutées`}.` : null);
+    const queue = kept.map((file, i) => ({ file, key: `${Date.now()}-${i}`, preview: URL.createObjectURL(file), video: file.type.startsWith('video/') }));
+    setPending((list) => [...list, ...queue.map(({ key, preview, video }) => ({ key, preview, video }))]);
+    for (const item of queue) {
+      try {
+        const confirmed = await uploadPostToCloudinary(item.video ? 'video' : 'image', item.file);
+        previews.current.set(confirmed.id, item.preview);
+        setMedia((m) => [...m, confirmed]);
+      } catch (err) {
+        setError(errorMessage(err));
+        URL.revokeObjectURL(item.preview);
+      } finally {
+        setPending((list) => list.filter((p) => p.key !== item.key));
+      }
     }
   };
 
@@ -162,29 +178,38 @@ export function Compose() {
               <Icon name="code" size={18} /> Ajouter du code
             </button>
           )}
-          <label className="btn btn-s" aria-disabled={uploading || media.length >= 5}>
-            {uploading ? <span className="spinner" /> : <Icon name="clip" size={18} />} Pièce jointe
+          <label className="btn btn-s" aria-disabled={media.length + pending.length >= MAX_MEDIA}>
+            <Icon name="clip" size={18} /> Photos ou vidéo
+            {media.length + pending.length > 0 && <span className="muted">{media.length + pending.length}/{MAX_MEDIA}</span>}
             <input
               type="file"
+              multiple
               className="sr-only"
               accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
-              disabled={uploading || media.length >= 5}
+              disabled={media.length + pending.length >= MAX_MEDIA}
               onChange={(e) => {
-                const file = e.target.files?.[0];
+                const files = Array.from(e.target.files ?? []);
                 e.target.value = '';
-                if (file) attach(file);
+                if (files.length) void attach(files);
               }}
             />
           </label>
         </div>
-        {media.length > 0 && (
-          <div className="media-grid">
-            {media.map((m) => (
-              <div key={m.id} style={{ position: 'relative' }}>
-                {m.resourceType === 'video' ? <video src={m.url} preload="metadata" /> : <img src={m.url} alt="Pièce jointe" />}
-                <button type="button" className="icon-btn" style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,.6)' }} aria-label="Retirer la pièce jointe" onClick={() => setMedia((list) => list.filter((x) => x.id !== m.id))}>
+        {media.length + pending.length > 0 && (
+          // Même grille que dans le fil : ce qu'on voit ici, c'est ce qui sera publié.
+          <div className={`mosaic mosaic-${Math.min(media.length + pending.length, MAX_MEDIA)}`}>
+            {media.map((m, i) => (
+              <div key={m.id} className="mosaic-tile">
+                {m.resourceType === 'video' ? <video src={previews.current.get(m.id) ?? m.url} preload="metadata" muted playsInline /> : <img src={previews.current.get(m.id) ?? m.url} alt={`Pièce jointe ${i + 1}`} />}
+                <button type="button" className="icon-btn mosaic-remove" aria-label={`Retirer la pièce jointe ${i + 1}`} onClick={() => setMedia((list) => list.filter((x) => x.id !== m.id))}>
                   <Icon name="x" size={18} />
                 </button>
+              </div>
+            ))}
+            {pending.map((p) => (
+              <div key={p.key} className="mosaic-tile is-pending" role="status" aria-label="Envoi en cours">
+                {p.video ? <video src={p.preview} muted playsInline /> : <img src={p.preview} alt="" />}
+                <span className="spinner" />
               </div>
             ))}
           </div>

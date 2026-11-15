@@ -526,12 +526,19 @@ a.list-item:hover, button.list-item:hover { background: var(--surface); }
 /* ---------- Visionneuse d'images ---------- */
 .lightbox {
   position: fixed; inset: 0; z-index: 60;
+  /* Une seule case de taille fixe (minmax(0, 1fr)) : sans elle, max-height: 100% ne vaut rien
+     et une photo verticale déborde de l'écran. Bas : place pour le compteur « 2 / 3 ». */
   display: grid; place-items: center;
-  padding: calc(env(safe-area-inset-top) + 56px) 12px calc(env(safe-area-inset-bottom) + 24px);
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  padding: calc(env(safe-area-inset-top) + 64px) 12px calc(env(safe-area-inset-bottom) + 48px);
   background: rgba(0, 0, 0, 0.94);
   animation: fade 200ms var(--ease-out) both;
 }
-.lightbox img, .lightbox video { max-width: 100%; max-height: 100%; border-radius: 12px; object-fit: contain; animation: zoom-in 320ms var(--spring) both; }
+.lightbox img, .lightbox video { width: auto; height: auto; max-width: 100%; max-height: 100%; border-radius: 12px; object-fit: contain; animation: zoom-in 320ms var(--spring) both; }
+/* Desktop : les flèches sortent de l'image. */
+@media (min-width: 768px) {
+  .lightbox:has(.lightbox-nav) { padding-left: 72px; padding-right: 72px; }
+}
 .lightbox-close { position: absolute; top: calc(env(safe-area-inset-top) + 8px); right: 8px; background: rgba(255, 255, 255, 0.12); color: #fff; }
 @keyframes zoom-in { from { transform: scale(0.92); opacity: 0; } }
 .zoomable { cursor: zoom-in; }
@@ -703,10 +710,19 @@ a.list-item:hover, button.list-item:hover { background: var(--surface); }
 .mosaic { display: grid; gap: 2px; border-radius: var(--radius); overflow: hidden; }
 .mosaic-2, .mosaic-3, .mosaic-4 { aspect-ratio: 16 / 9; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .mosaic-3, .mosaic-4 { grid-template-rows: repeat(2, minmax(0, 1fr)); }
-.mosaic-3 .mosaic-cell:first-child { grid-row: 1 / -1; }
-.mosaic-cell { position: relative; display: block; min-height: 0; padding: 0; border: 0; background: var(--surface); cursor: zoom-in; }
-.mosaic-cell img { display: block; width: 100%; height: 100%; object-fit: cover; transition: opacity 150ms var(--ease); }
-.mosaic-1 .mosaic-cell img { height: auto; max-height: 560px; }
+.mosaic-3 > :first-child { grid-row: 1 / -1; }
+/* 5 pièces jointes : seulement dans l'aperçu de la publication (le fil s'arrête à 4 + « +N », comme X). */
+.mosaic-5 { aspect-ratio: 16 / 9; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
+.mosaic-5 > :nth-child(-n + 2) { grid-column: span 3; }
+.mosaic-5 > :nth-child(n + 3) { grid-column: span 2; }
+.mosaic-cell, .mosaic-tile { position: relative; display: block; min-height: 0; padding: 0; border: 0; background: var(--surface); }
+.mosaic-cell { cursor: zoom-in; }
+.mosaic-cell img, .mosaic-tile img, .mosaic-tile video { display: block; width: 100%; height: 100%; object-fit: cover; transition: opacity 150ms var(--ease); }
+.mosaic-1 .mosaic-cell img, .mosaic-1 .mosaic-tile img, .mosaic-1 .mosaic-tile video { height: auto; max-height: 560px; }
+.mosaic-remove { position: absolute; top: 4px; right: 4px; background: rgba(0, 0, 0, 0.6); color: #fff; }
+.mosaic-remove:hover { background: rgba(0, 0, 0, 0.8); }
+.mosaic-tile.is-pending img, .mosaic-tile.is-pending video { opacity: 0.45; }
+.mosaic-tile.is-pending .spinner { position: absolute; top: 50%; left: 50%; margin: -9px 0 0 -9px; color: #fff; }
 .mosaic-cell:hover img { opacity: 0.9; }
 .mosaic-cell:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .mosaic-more {
