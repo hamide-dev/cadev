@@ -3,9 +3,9 @@ import { openLightbox } from '../../components/Lightbox';
 type Photo = { src: string; alt: string };
 const SHOWN = 4;
 
-// Photos d'une publication en mosaïque, comme sur LinkedIn :
-// 1 photo pleine largeur, 2 côte à côte, 3 et plus : une grande en haut, les autres en dessous,
-// « +N » sur la dernière case quand il y en a plus de 4. Un clic ouvre la galerie sur la bonne photo.
+// Photos d'une publication en grille, comme sur X :
+// 1 photo pleine largeur, 2 côte à côte, 3 : une grande à gauche et deux empilées à droite, 4 : 2 × 2.
+// « +N » sur la 4e case quand il y en a plus. Un clic ouvre la galerie sur la bonne photo.
 export function PhotoMosaic({ photos }: { photos: Photo[] }) {
   const shown = photos.slice(0, SHOWN);
   const hidden = photos.length - shown.length;
