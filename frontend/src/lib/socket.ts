@@ -7,7 +7,7 @@ export interface Conversation {
   id: string;
   type: 'DIRECT' | 'GROUP';
   name: string | null;
-  members: Array<Pick<Author, 'id' | 'username' | 'displayName'>>;
+  members: Array<Pick<Author, 'id' | 'username' | 'displayName' | 'avatarUrl'>>;
   unreadCount: number;
   createdAt: string;
 }

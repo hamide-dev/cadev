@@ -8,6 +8,7 @@ import { OtpInput } from './OtpInput';
 import { api, ApiError, type Level, type Specialty } from '../../lib/api';
 import { EMAIL_PATTERN, errorMessage, INTERESTS, LEVELS, roleLine, SPECIALTIES } from '../../lib/format';
 import { useSession } from '../../lib/session';
+import { markInstallPending } from '../../lib/install';
 
 /**
  * Nouveau flux d'inscription en 5 etapes :
@@ -130,6 +131,7 @@ export function Signup() {
         setUser(await api.updateMe({ specialty: profile.specialty, experienceLevel: profile.experienceLevel, bio: profile.bio.trim() || undefined, githubUrl }));
       } else if (step === 4) {
         setUser(await api.updateMe({ interests }));
+        markInstallPending();
         return navigate('/feed');
       }
       setStep(step + 1);

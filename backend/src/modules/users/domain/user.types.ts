@@ -29,3 +29,11 @@ export interface PublicUser {
   technologies: string[];
   createdAt: string;
 }
+
+// Profil vu par quelqu'un : compteurs d'abonnés et lien avec la personne qui regarde.
+export interface ProfileView extends PublicUser {
+  followerCount: number;
+  followingCount: number;
+  isFollowing: boolean;
+  followsYou: boolean;
+}

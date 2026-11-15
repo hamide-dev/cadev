@@ -5,6 +5,7 @@ import { Icon } from '../../components/Icon';
 import { api, type Level, type Specialty } from '../../lib/api';
 import { errorMessage, INTERESTS, LEVELS, SPECIALTIES } from '../../lib/format';
 import { useMe, useSession } from '../../lib/session';
+import { markInstallPending } from '../../lib/install';
 
 export function OAuthOnboarding() {
   const user = useMe();
@@ -35,6 +36,7 @@ export function OAuthOnboarding() {
         githubUrl: github.trim() || null,
       });
       setUser(updated);
+      markInstallPending();
       navigate('/feed', { replace: true });
     } catch (reason) {
       setError(errorMessage(reason));

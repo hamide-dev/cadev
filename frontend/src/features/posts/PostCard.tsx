@@ -3,12 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Avatar } from '../../components/Avatar';
 import { Icon } from '../../components/Icon';
 import { RepoCard } from '../../components/RepoCard';
-import { RichText } from './RichText';
+import { firstUrl, RichText } from './RichText';
+import { LinkPreviewCard } from '../messages/LinkPreviewCard';
 import { CodeBlock } from './CodeBlock';
 import { api, type Post } from '../../lib/api';
 import { errorMessage, findRepoUrl, timeAgo } from '../../lib/format';
 import { useSession } from '../../lib/session';
 import { isSaved, toggleSaved, useSaved } from '../../lib/saved';
+import { openLightbox } from '../../components/Lightbox';
 
 const TYPE_LABEL: Record<Post['type'], string | null> = { QUESTION: 'Question', PROJECT_LAUNCH: 'Projet', ARTICLE: null };
 
@@ -85,40 +87,53 @@ export function PostCard({ post, onChange, onDelete, linked = true }: { post: Po
               @{post.author.username} · <time dateTime={post.createdAt}>{timeAgo(post.createdAt)}</time>
             </div>
           </div>
-          {mine && onDelete && (
-            <div style={{ position: 'relative' }}>
-              <button type="button" className="icon-btn" aria-label="Options de la publication" aria-expanded={menu} onClick={() => setMenu(!menu)}>
-                <Icon name="more" />
-              </button>
-              {menu && (
-                <div className="group" style={{ position: 'absolute', right: 0, top: 44, zIndex: 5, minWidth: 200 }}>
-                  <button
-                    type="button"
-                    className="list-item"
-                    disabled={busy}
-                    onClick={() => run(async () => {
-                      await api.pin(post.id, !post.isPinned);
-                      onChange?.({ ...post, isPinned: !post.isPinned });
-                    })}
-                  >
-                    <Icon name="pin" size={18} /> {post.isPinned ? 'Désépingler' : 'Épingler sur mon profil'}
+          <div style={{ position: 'relative' }}>
+            <button type="button" className="icon-btn" aria-label="Options de la publication" aria-expanded={menu} onClick={() => setMenu(!menu)}>
+              <Icon name="more" />
+            </button>
+            {menu && (
+              <>
+                <div className="menu-scrim" onClick={() => setMenu(false)} />
+                <div className="menu" role="menu">
+                  <button type="button" role="menuitem" className="list-item" onClick={() => { setMenu(false); void share(); }}>
+                    <Icon name="share" size={18} /> Partager
                   </button>
-                  <button
-                    type="button"
-                    className="list-item"
-                    style={{ color: 'var(--danger)' }}
-                    disabled={busy}
-                    onClick={() => confirm('Supprimer cette publication ?') && run(async () => {
-                      await api.deletePost(post.id);
-                      onDelete(post.id);
-                    })}
-                  >
-                    <Icon name="x" size={18} /> Supprimer
+                  <button type="button" role="menuitem" className="list-item" onClick={() => { toggleSaved(post); setMenu(false); }}>
+                    <Icon name="bookmark" size={18} /> {saved ? 'Retirer des sauvegardes' : 'Sauvegarder'}
                   </button>
+                  {mine && onDelete && (
+                    <>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="list-item"
+                        disabled={busy}
+                        onClick={() => run(async () => {
+                          await api.pin(post.id, !post.isPinned);
+                          onChange?.({ ...post, isPinned: !post.isPinned });
+                        })}
+                      >
+                        <Icon name="pin" size={18} /> {post.isPinned ? 'Désépingler' : 'Épingler sur mon profil'}
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="list-item"
+                        style={{ color: 'var(--danger)' }}
+                        disabled={busy}
+                        onClick={() => confirm('Supprimer cette publication ?') && run(async () => {
+                          await api.deletePost(post.id);
+                          onDelete(post.id);
+                        })}
+                      >
+                        <Icon name="x" size={18} /> Supprimer
+                      </button>
+                    </>
+                  )}
                 </div>
-              )}
-            </div>
-          )}
+              </>
+            )}
+          </div>
         </div>
         {linked ? (
           <Link to={`/post/${post.id}`} className="post-link">
@@ -139,14 +154,16 @@ export function PostCard({ post, onChange, onDelete, linked = true }: { post: Po
           <div className="media-grid">
             {post.attachments.map((media) =>
               media.resourceType === 'video' ? (
-                <video key={media.id} src={media.url} controls preload="metadata" />
+                <video key={media.id} src={media.url} controls playsInline preload="metadata" />
               ) : (
-                <img key={media.id} src={media.url} alt="Pièce jointe" loading="lazy" />
+                <button key={media.id} type="button" className="media-open" aria-label="Agrandir l’image" onClick={() => openLightbox({ src: media.url, alt: `Image de ${post.author.displayName}` })}>
+                  <img src={media.url} alt="" loading="lazy" />
+                </button>
               ),
             )}
           </div>
         )}
-        {repo && <RepoCard url={repo} />}
+        {repo ? <RepoCard url={repo} /> : firstUrl(post.content) && <LinkPreviewCard url={firstUrl(post.content)!} />}
         <div className="post-actions">
           <Link to={`/post/${post.id}`} className="action" aria-label={post.type === 'QUESTION' ? 'Voir les réponses' : 'Voir les commentaires'}>
             <Icon name="comment" size={20} />

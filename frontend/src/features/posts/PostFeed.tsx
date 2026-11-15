@@ -39,6 +39,12 @@ export function PostFeed({ load, empty, cacheKey }: { load: (cursor?: string | n
     fetchPage(null);
   }, [fetchPage, cacheKey]);
 
+  // Un like, un épinglage ou une suppression mettent aussi à jour la copie gardée en mémoire :
+  // en revenant sur le fil, on retrouve exactement ce qu'on a laissé.
+  useEffect(() => {
+    if (cacheKey && items) pageCache.set(cacheKey, { items, nextCursor: cursor, hasMore });
+  }, [cacheKey, items, cursor, hasMore]);
+
   if (error && !items) return <ErrorState message={error} onRetry={() => fetchPage(null)} />;
   if (!items) return <Loading />;
   if (items.length === 0) return <>{empty}</>;

@@ -306,6 +306,19 @@ export class MessagingService {
     ]);
     return mapMessage(persisted, attachments.get(messageId) ?? []);
   }
+
+  // Seul l'auteur peut supprimer son message. Les réponses restent, sans citation (clé étrangère SET NULL).
+  async deleteMessage(userId: string, messageId: string): Promise<{ id: string; conversationId: string }> {
+    const message = await this.messages.findOneBy({ id: messageId });
+    if (!message) {
+      throw new NotFoundException({ code: 'MESSAGE_NOT_FOUND', message: 'Message not found.' });
+    }
+    if (message.senderId !== userId) {
+      throw new ForbiddenException({ code: 'MESSAGE_DELETE_FORBIDDEN', message: 'Only the sender can delete this message.' });
+    }
+    await this.messages.delete({ id: messageId });
+    return { id: messageId, conversationId: message.conversationId };
+  }
 }
 
 function mapMessage(
@@ -342,6 +355,7 @@ function mapConversation(conversation: ConversationEntity): PublicConversation {
       id: member.user.id,
       username: member.user.username,
       displayName: member.user.displayName,
+      avatarUrl: member.user.avatarUrl,
     })),
     createdAt: conversation.createdAt.toISOString(),
   };

@@ -101,8 +101,11 @@
   .shell-wide .shell-main > .screen { max-width: 980px; }
 
   .sheet-backdrop { align-items: center; padding: var(--space-5); }
-  .sheet { border-radius: 20px; padding-bottom: var(--space-6); }
-  .sheet::before { display: none; }
+  /* Sur grand écran, la fenêtre devient une boîte centrée qui apparaît en douceur. */
+  .sheet { border-radius: 20px; padding-bottom: var(--space-6); animation-name: dialog-in; }
+  .sheet.is-closing { animation-name: dialog-out; }
+  .sheet-handle { display: none; }
+  .sheet-grab { cursor: default; padding-top: var(--space-3); }
 }
 
 /* ---------- Écran moyen : deux volets et deux colonnes ---------- */
@@ -225,3 +228,6 @@
 @media (min-width: 1200px) {
   .shell-focus { grid-template-columns: 264px minmax(0, 680px); }
 }
+
+@keyframes dialog-in { from { opacity: 0; transform: scale(0.96) translateY(8px); } }
+@keyframes dialog-out { to { opacity: 0; transform: scale(0.97); } }

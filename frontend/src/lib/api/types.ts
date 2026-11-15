@@ -19,6 +19,11 @@ export interface User {
   interests: string[];
   technologies: string[];
   createdAt: string;
+  // Présents sur la fiche d'un profil (GET /users/:username).
+  followerCount?: number;
+  followingCount?: number;
+  isFollowing?: boolean;
+  followsYou?: boolean;
 }
 
 export interface UserPage {
@@ -169,4 +174,12 @@ export interface UploadSignature {
   resourceType: 'image' | 'video';
   uploadType: 'upload' | 'authenticated';
   maxBytes: number;
+}
+
+export interface LinkPreview {
+  url: string;
+  title: string | null;
+  description: string | null;
+  image: string | null;
+  siteName: string;
 }

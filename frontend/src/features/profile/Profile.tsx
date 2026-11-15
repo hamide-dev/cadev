@@ -12,10 +12,13 @@ import { errorMessage, roleLine, SPECIALTIES } from '../../lib/format';
 import { useMe } from '../../lib/session';
 import { type Conversation, emit } from '../../lib/socket';
 import { useLoad } from '../../lib/useLoad';
+import { openLightbox } from '../../components/Lightbox';
+import { Linkify } from '../posts/RichText';
 
 // Image choisie par l'utilisateur, sinon bannière décorative écrite à partir des vraies données du profil.
 export function Banner({ user }: { user: User }) {
-  if (user.bannerUrl) return <img className="banner banner-img" src={user.bannerUrl} alt="" />;
+  if (user.bannerUrl)
+    return <img className="banner banner-img zoomable" src={user.bannerUrl} alt={`Bannière de ${user.displayName}`} onClick={() => openLightbox({ src: user.bannerUrl!, alt: `Bannière de ${user.displayName}` })} />;
   const role = user.specialty ? SPECIALTIES[user.specialty] : 'Développeur';
   const passion = user.interests[0] ?? user.technologies[0] ?? 'code';
   return (
@@ -30,18 +33,25 @@ export function Profile() {
   const { username = '' } = useParams();
   const navigate = useNavigate();
   const [tab, setTab] = useState<'posts' | 'projects' | 'contributions'>('posts');
-  const [following, setFollowing] = useState(false);
-  const [friend, setFriend] = useState(false);
+  // null = on suit ce que dit le serveur ; sinon, le dernier choix fait sur cet écran.
+  const [followOverride, setFollowOverride] = useState<boolean | null>(null);
+  const [friendOverride, setFriend] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const mine = username.toLowerCase() === me.username.toLowerCase();
-  const profile = useLoad(() => (mine ? Promise.resolve(me) : api.user(username)), [username, mine, me]);
+  // Toujours la fiche serveur, même pour soi : elle porte les compteurs d'abonnés et l'état « suivi ».
+  const profile = useLoad(() => api.user(username), [username, me]);
   const projects = useLoad(() => api.projects(), []);
   const loadPosts = useCallback((cursor?: string | null) => api.userPosts(username, cursor), [username]);
 
   if (profile.error) return <main className="screen"><TopBar back title="Profil" /><ErrorState message={profile.error} onRetry={profile.reload} /></main>;
   if (!profile.data) return <main className="screen"><TopBar back title="Profil" /><Loading /></main>;
-  const user = profile.data;
+  const user = mine ? { ...profile.data, ...me } : profile.data;
+  const serverFollowing = !!profile.data.isFollowing;
+  const following = followOverride ?? serverFollowing;
+  const friend = friendOverride || (following && !!profile.data.followsYou);
+  const followers = (profile.data.followerCount ?? 0) + (following === serverFollowing ? 0 : following ? 1 : -1);
+  const setFollowing = setFollowOverride;
   const owned = (projects.data ?? []).filter((p) => p.ownerId === user.id);
   const topics = user.technologies.length ? user.technologies : user.interests;
 
@@ -65,6 +75,7 @@ export function Profile() {
         ? await api.unfollow(user.username)
         : await api.follow(user.username);
       setFollowing(!following);
+      if (following) setFriend(false);
       if (!following && result.friend) {
         setFriend(true);
         setNotice('Vous êtes maintenant amis. Une conversation a été ajoutée à vos messages.');
@@ -91,37 +102,48 @@ export function Profile() {
     <main className="screen">
       <div style={{ position: 'relative' }}>
         <Banner user={user} />
-        <button type="button" className="icon-btn" style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(0,0,0,.45)' }} aria-label="Retour" onClick={() => navigate(-1)}>
-          <Icon name="x" />
-        </button>
-        {mine && (
-          <Link to="/settings" className="icon-btn" style={{ position: 'absolute', top: 12, right: 12, background: 'rgba(0,0,0,.45)' }} aria-label="Paramètres">
-            <Icon name="gear" />
-          </Link>
-        )}
+        <div className="profile-bar">
+          {!mine && (
+            <button type="button" className="icon-btn glass" aria-label="Retour" onClick={() => navigate(-1)}>
+              <Icon name="back" />
+            </button>
+          )}
+          <span className="grow" />
+          <button type="button" className="icon-btn glass" aria-label="Partager le profil" onClick={share}>
+            <Icon name="share" size={20} />
+          </button>
+          {mine && (
+            <Link to="/settings" className="icon-btn glass" aria-label="Paramètres">
+              <Icon name="gear" />
+            </Link>
+          )}
+        </div>
       </div>
       <div className="pad stack" style={{ marginTop: -48, position: 'relative' }}>
         <div className="row-between wrap" style={{ alignItems: 'flex-end' }}>
-          <Avatar user={user} size="xl" link={false} />
-          <div className="row">
-            {mine && (
-              <Link to="/saved" className="icon-btn bordered" aria-label="Mes sauvegardes">
-                <Icon name="bookmark" size={20} />
-              </Link>
-            )}
-            <button type="button" className="icon-btn bordered" aria-label="Partager le profil" onClick={share}>
-              <Icon name="share" size={20} />
+          {user.avatarUrl ? (
+            <button type="button" className="avatar-zoom" aria-label={`Voir la photo de ${user.displayName}`} onClick={() => openLightbox({ src: user.avatarUrl!, alt: user.displayName })}>
+              <Avatar user={user} size="xl" link={false} />
             </button>
+          ) : (
+            <Avatar user={user} size="xl" link={false} />
+          )}
+          <div className="row">
             {mine ? (
-              <Link to="/profile/edit" className="btn btn-primary" style={{ borderRadius: 999 }}>
-                <Icon name="edit" size={18} /> Modifier le profil
-              </Link>
+              <>
+                <Link to="/saved" className="icon-btn bordered" aria-label="Mes sauvegardes">
+                  <Icon name="bookmark" size={20} />
+                </Link>
+                <Link to="/profile/edit" className="btn btn-primary pill">
+                  <Icon name="edit" size={18} /> Modifier le profil
+                </Link>
+              </>
             ) : (
               <>
-                <button type="button" className="btn" style={{ borderRadius: 999 }} onClick={message} disabled={busy}>
+                <button type="button" className="btn pill" onClick={message} disabled={busy}>
                   <Icon name="mail" size={18} /> Message
                 </button>
-                <button type="button" className={`btn ${following ? '' : 'btn-primary'}`} style={{ borderRadius: 999 }} aria-pressed={following} onClick={toggleFollow} disabled={busy}>
+                <button type="button" className={`btn pill ${following ? '' : 'btn-primary'}`} aria-pressed={following} onClick={toggleFollow} disabled={busy}>
                   {friend ? 'Ami' : following ? 'Abonné' : 'Suivre'}
                 </button>
               </>
@@ -130,14 +152,21 @@ export function Profile() {
         </div>
         <div className="stack-s">
           <h1 style={{ fontSize: 24, fontWeight: 700 }}>{user.displayName}</h1>
-          <p className="post-handle" style={{ fontSize: 14 }}>@{user.username}</p>
+          <p className="post-handle" style={{ fontSize: 14 }}>
+            @{user.username}
+            {!mine && profile.data.followsYou && <span className="follows-you">Vous suit</span>}
+          </p>
           {roleLine(user) && <p className="small muted">{roleLine(user)}</p>}
-          {user.bio && <p>{user.bio}</p>}
+          {user.bio && <p className="post-text"><Linkify text={user.bio} /></p>}
           {user.githubUrl && (
-            <a href={user.githubUrl} target="_blank" rel="noreferrer" className="row link-accent small" style={{ color: '#7cc4ff' }}>
+            <a href={user.githubUrl} target="_blank" rel="noopener noreferrer" className="row link-accent small">
               <Icon name="link" size={18} /> {user.githubUrl.replace(/^https:\/\/(www\.)?/, '')}
             </a>
           )}
+          <p className="profile-counts">
+            <span><strong>{followers}</strong> abonné{followers > 1 ? 's' : ''}</span>
+            <span><strong>{profile.data.followingCount ?? 0}</strong> abonnement{(profile.data.followingCount ?? 0) > 1 ? 's' : ''}</span>
+          </p>
         </div>
         {notice && <p className="alert info" role="status">{notice}</p>}
         {topics.length > 0 && (

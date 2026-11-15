@@ -2,6 +2,8 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useSession } from '../lib/session';
 import { Aside } from './Aside';
 import { Nav } from './Nav';
+import { InstallPrompt } from '../features/install/InstallPrompt';
+import { LightboxHost } from '../components/Lightbox';
 
 // Écrans principaux : la barre du bas n'apparaît que sur eux, sur mobile.
 const MAIN_SCREENS = /^\/(feed|explore|projects|notifications|messages)\/?$|^\/u\//;
@@ -21,10 +23,13 @@ export function Shell() {
   return (
     <div className={`shell shell-${layout} ${MAIN_SCREENS.test(pathname) ? 'has-mobile-nav' : ''}`}>
       <Nav />
-      <div className="shell-main">
+      {/* Clé par écran : chaque changement d'écran rejoue l'animation d'entrée. La messagerie garde sa liste en place. */}
+      <div key={pathname.startsWith('/messages') ? '/messages' : pathname} className="shell-main screen-enter">
         <Outlet />
       </div>
       {layout === 'aside' && <Aside />}
+      <InstallPrompt />
+      <LightboxHost />
     </div>
   );
 }

@@ -30,6 +30,7 @@ import {
 import { CurrentUser } from '../../../common/auth/current-user.decorator.js';
 import type { AuthUser } from '../../../common/auth/auth-user.js';
 import { JwtAuthGuard } from '../../../common/auth/jwt-auth.guard.js';
+import { OptionalJwtAuthGuard } from '../../../common/auth/optional-jwt-auth.guard.js';
 import {
   CommentSort,
   type PublicComment,
@@ -146,21 +147,25 @@ export class PostsController {
   }
 
   @Get('users/:username')
+  @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'List public posts from a developer profile' })
   listByUsername(
+    @CurrentUser() user: AuthUser | undefined,
     @Param('username') username: string,
     @Query() query: FeedQueryDto,
   ) {
     const limit = Math.min(Math.max(query.limit ?? 20, 1), 50);
-    return this.postsService.listByUsername(username, query.cursor, limit);
+    return this.postsService.listByUsername(username, query.cursor, limit, user?.id);
   }
 
   @Get(':postId')
+  @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Get a public post' })
   get(
+    @CurrentUser() user: AuthUser | undefined,
     @Param('postId', new ParseUUIDPipe({ version: '4' })) id: string,
   ): Promise<PublicPost> {
-    return this.postsService.getById(id);
+    return this.postsService.getById(id, user?.id);
   }
 
   @Patch(':postId')

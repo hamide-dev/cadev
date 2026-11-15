@@ -28,6 +28,7 @@ import { CreateConversationDto } from './dto/create-conversation.dto.js';
 import { ConversationIdDto } from './dto/conversation-id.dto.js';
 import { MessageHistoryDto } from './dto/message-history.dto.js';
 import { SendMessageDto } from './dto/send-message.dto.js';
+import { MessageIdDto } from './dto/message-id.dto.js';
 import { apiKeysMatch } from '../../../security/frontend-api-key.guard.js';
 import { PushNotificationsService } from '../../notifications/application/push-notifications.service.js';
 
@@ -262,6 +263,17 @@ export class MessagingGateway implements OnGatewayInit {
       }
     }
     return message;
+  }
+
+  @SubscribeMessage('message:delete')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+  async deleteMessage(
+    @ConnectedSocket() socket: AuthenticatedSocket,
+    @MessageBody() input: MessageIdDto,
+  ): Promise<{ id: string; conversationId: string }> {
+    const deleted = await this.messagingService.deleteMessage(socket.data.userId, input.messageId);
+    this.server.to(`conversation:${deleted.conversationId}`).emit('message:deleted', deleted);
+    return deleted;
   }
 
   @SubscribeMessage('typing:start')

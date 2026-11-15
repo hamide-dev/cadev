@@ -40,4 +40,8 @@
   --nav-h: 64px;
   --topbar-h: 68px; /* bouton de 44 px + 12 px de marge en haut et en bas */
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  /* Ressort léger, proche des transitions iOS (léger dépassement puis retour). */
+  --spring: cubic-bezier(0.32, 1.25, 0.5, 1);
 }

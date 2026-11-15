@@ -8,7 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { createHash } from 'node:crypto';
 import { Repository } from 'typeorm';
 import { isUniqueViolation } from '../../../database/is-unique-violation.js';
-import type { PublicUser } from '../domain/user.types.js';
+import type { ProfileView, PublicUser } from '../domain/user.types.js';
 import { UserEntity } from '../infrastructure/user.entity.js';
 import { UserFollowEntity } from '../infrastructure/user-follow.entity.js';
 import type { UpdateProfileDto } from '../presentation/dto/update-profile.dto.js';
@@ -174,7 +174,7 @@ export class UsersService {
     return user;
   }
 
-  async findPublicByUsername(username: string): Promise<PublicUser> {
+  async findPublicByUsername(username: string, viewerId?: string): Promise<ProfileView> {
     const user = await this.users.findOneBy({ username });
     if (!user) {
       throw new NotFoundException({
@@ -182,7 +182,13 @@ export class UsersService {
         message: 'User not found.',
       });
     }
-    return toPublicUser(user);
+    const [followerCount, followingCount, isFollowing, followsYou] = await Promise.all([
+      this.follows.countBy({ followedId: user.id }),
+      this.follows.countBy({ followerId: user.id }),
+      viewerId && viewerId !== user.id ? this.follows.existsBy({ followerId: viewerId, followedId: user.id }) : false,
+      viewerId && viewerId !== user.id ? this.follows.existsBy({ followerId: user.id, followedId: viewerId }) : false,
+    ]);
+    return { ...toPublicUser(user, viewerId === user.id), followerCount, followingCount, isFollowing, followsYou };
   }
 
   async updateProfile(

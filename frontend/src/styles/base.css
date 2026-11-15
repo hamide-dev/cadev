@@ -9,6 +9,10 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 button, input, textarea, select { font: inherit; color: inherit; }
+/* Pas de carré bleu au toucher sur Android / iOS ; le retour visuel vient de nos propres états. */
+* { -webkit-tap-highlight-color: transparent; }
+a, button, [role='button'], label { touch-action: manipulation; }
+:focus:not(:focus-visible) { outline: none; }
 a { color: inherit; }
 h1, h2, h3, p { margin: 0; }
 fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }

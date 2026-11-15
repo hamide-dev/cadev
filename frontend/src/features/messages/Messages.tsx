@@ -96,7 +96,7 @@ function ConversationList({ openId }: { openId?: string }) {
                     <Icon name="branch" size={22} />
                   </span>
                 ) : (
-                  <Avatar user={{ ...(c.members.find((m) => m.id !== me.id) ?? c.members[0]!), avatarUrl: null }} link={false} />
+                  <Avatar user={{ ...(c.members.find((m) => m.id !== me.id) ?? c.members[0]!), avatarUrl: (c.members.find((m) => m.id !== me.id) ?? c.members[0]!).avatarUrl ?? null }} link={false} />
                 )}
                 <div className="grow">
                   <p className="strong">{conversationTitle(c, me.id)}</p>

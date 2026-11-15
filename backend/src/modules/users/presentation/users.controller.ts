@@ -15,8 +15,9 @@ import { IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validato
 import { CurrentUser } from '../../../common/auth/current-user.decorator.js';
 import type { AuthUser } from '../../../common/auth/auth-user.js';
 import { JwtAuthGuard } from '../../../common/auth/jwt-auth.guard.js';
+import { OptionalJwtAuthGuard } from '../../../common/auth/optional-jwt-auth.guard.js';
 import { UsersService } from '../application/users.service.js';
-import type { PublicUser } from '../domain/user.types.js';
+import type { ProfileView, PublicUser } from '../domain/user.types.js';
 import { UpdateProfileDto } from './dto/update-profile.dto.js';
 
 class UserListQueryDto {
@@ -75,9 +76,13 @@ export class UsersController {
   }
 
   @Get(':username')
-  @ApiOperation({ summary: 'Get a public developer profile' })
-  getPublicProfile(@Param('username') username: string): Promise<PublicUser> {
-    return this.usersService.findPublicByUsername(username.toLowerCase());
+  @UseGuards(OptionalJwtAuthGuard)
+  @ApiOperation({ summary: 'Get a public developer profile with follower counts' })
+  getPublicProfile(
+    @CurrentUser() user: AuthUser | undefined,
+    @Param('username') username: string,
+  ): Promise<ProfileView> {
+    return this.usersService.findPublicByUsername(username.toLowerCase(), user?.id);
   }
 
   @Patch('me')
