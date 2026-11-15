@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import type { Environment } from '../config/environment.js';
+import { SchemaGuardService } from './schema-guard.service.js';
 
 @Module({
   imports: [
@@ -25,5 +26,6 @@ import type { Environment } from '../config/environment.js';
       }),
     }),
   ],
+  providers: [SchemaGuardService],
 })
 export class DatabaseModule {}
