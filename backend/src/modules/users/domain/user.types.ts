@@ -5,6 +5,7 @@ export enum DeveloperSpecialty {
   MOBILE = 'MOBILE',
   DATA_AI = 'DATA_AI',
   DEVOPS = 'DEVOPS',
+  VIBE_CODING = 'VIBE_CODING',
 }
 
 export enum ExperienceLevel {
@@ -34,6 +35,8 @@ export interface PublicUser {
 export interface ProfileView extends PublicUser {
   followerCount: number;
   followingCount: number;
+  postCount: number;
+  likeCount: number;
   isFollowing: boolean;
   followsYou: boolean;
 }

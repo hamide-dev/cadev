@@ -23,6 +23,7 @@ import { Projects } from '../features/projects/Projects';
 import { TaskDetail } from '../features/projects/TaskDetail';
 import { useSession } from '../lib/session';
 import { NotFound } from './NotFound';
+import { Privacy, Terms } from '../features/legal/Legal';
 import { Shell } from './Shell';
 
 function Splash() {
@@ -49,6 +50,8 @@ export function App() {
     <Routes>
       <Route path="/" element={<Navigate to={user ? '/feed' : '/welcome'} replace />} />
       <Route path="/oauth/callback" element={<OAuthCallback />} />
+      <Route path="/conditions" element={<Terms />} />
+      <Route path="/confidentialite" element={<Privacy />} />
       <Route element={<AuthLayout />}>
         <Route element={<Guests />}>
           <Route path="/welcome" element={<Welcome />} />

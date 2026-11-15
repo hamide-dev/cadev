@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ErrorState, Loading } from '../../components/states';
 import { PostCard } from './PostCard';
 import { type Post } from '../../lib/api';
@@ -17,6 +17,7 @@ export function PostFeed({ load, empty, cacheKey }: { load: (cursor?: string | n
   const [hasMore, setHasMore] = useState(cached?.hasMore ?? false);
   const [error, setError] = useState<string | null>(null);
   const [more, setMore] = useState(false);
+  const sentinel = useRef<HTMLDivElement>(null);
 
   const fetchPage = useCallback(
     async (from: string | null) => {
@@ -45,6 +46,22 @@ export function PostFeed({ load, empty, cacheKey }: { load: (cursor?: string | n
     if (cacheKey && items) pageCache.set(cacheKey, { items, nextCursor: cursor, hasMore });
   }, [cacheKey, items, cursor, hasMore]);
 
+  const loadMore = useCallback(async () => {
+    if (more || !hasMore || !cursor) return;
+    setMore(true);
+    await fetchPage(cursor);
+    setMore(false);
+  }, [more, hasMore, cursor, fetchPage]);
+
+  // Fil sans fin : la page suivante se charge quand on arrive à environ un écran du bas.
+  useEffect(() => {
+    const node = sentinel.current;
+    if (!node || !hasMore) return;
+    const observer = new IntersectionObserver((entries) => entries[0]?.isIntersecting && void loadMore(), { rootMargin: '0px 0px 900px 0px' });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMore, loadMore]);
+
   if (error && !items) return <ErrorState message={error} onRetry={() => fetchPage(null)} />;
   if (!items) return <Loading />;
   if (items.length === 0) return <>{empty}</>;
@@ -59,21 +76,15 @@ export function PostFeed({ load, empty, cacheKey }: { load: (cursor?: string | n
         />
       ))}
       {hasMore && (
-        <div className="pad" style={{ padding: 16 }}>
-          <button
-            type="button"
-            className="btn btn-block"
-            disabled={more}
-            onClick={async () => {
-              setMore(true);
-              await fetchPage(cursor);
-              setMore(false);
-            }}
-          >
-            {more ? <span className="spinner" aria-label="Chargement" /> : 'Voir plus de publications'}
-          </button>
+        <div ref={sentinel} className="feed-more" aria-live="polite">
+          {more ? <span className="spinner" aria-label="Chargement de la suite" /> : (
+            <button type="button" className="btn btn-ghost btn-s" onClick={() => void loadMore()}>
+              Voir plus de publications
+            </button>
+          )}
         </div>
       )}
+      {!hasMore && items.length > 5 && <p className="feed-end">Tu es à jour. Reviens plus tard ou explore de nouveaux développeurs.</p>}
       {error && <p className="alert" style={{ margin: 16 }}>{error}</p>}
     </div>
   );

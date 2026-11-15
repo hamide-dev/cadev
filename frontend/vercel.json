@@ -1,6 +1,21 @@
 {
   "rewrites": [
     {
+      "source": "/u/:username",
+      "has": [{ "type": "header", "key": "user-agent", "value": ".*(facebookexternalhit|Facebot|Twitterbot|WhatsApp|LinkedInBot|Slackbot|TelegramBot|Discordbot|Pinterest|redditbot|Applebot|SkypeUriPreview|Embedly|Iframely|vkShare|Googlebot|bingbot|Snapchat|Viber).*" }],
+      "destination": "/api/share?type=user&id=:username"
+    },
+    {
+      "source": "/post/:id",
+      "has": [{ "type": "header", "key": "user-agent", "value": ".*(facebookexternalhit|Facebot|Twitterbot|WhatsApp|LinkedInBot|Slackbot|TelegramBot|Discordbot|Pinterest|redditbot|Applebot|SkypeUriPreview|Embedly|Iframely|vkShare|Googlebot|bingbot|Snapchat|Viber).*" }],
+      "destination": "/api/share?type=post&id=:id"
+    },
+    {
+      "source": "/projects/:id",
+      "has": [{ "type": "header", "key": "user-agent", "value": ".*(facebookexternalhit|Facebot|Twitterbot|WhatsApp|LinkedInBot|Slackbot|TelegramBot|Discordbot|Pinterest|redditbot|Applebot|SkypeUriPreview|Embedly|Iframely|vkShare|Googlebot|bingbot|Snapchat|Viber).*" }],
+      "destination": "/api/share?type=project&id=:id"
+    },
+    {
       "source": "/api/v1/:path*",
       "destination": "https://cadev-1.onrender.com/api/v1/:path*"
     },

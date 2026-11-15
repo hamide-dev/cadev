@@ -385,7 +385,7 @@ a.list-item:hover, button.list-item:hover { background: var(--surface); }
 
 /* Bannière de profil générée à partir du profil réel */
 .banner {
-  height: 128px;
+  height: 176px;
   padding: var(--space-3) var(--space-4) var(--space-3) 72px;
   background: #1a1824;
   color: rgba(183, 154, 255, 0.55);
@@ -546,8 +546,19 @@ a.list-item:hover, button.list-item:hover { background: var(--surface); }
 .icon-btn.glass { background: rgba(0, 0, 0, 0.5); color: #fff; -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
 .icon-btn.glass:hover { background: rgba(0, 0, 0, 0.65); }
 .avatar-zoom { padding: 0; border: 0; background: none; border-radius: 50%; cursor: zoom-in; }
-.profile-counts { display: flex; flex-wrap: wrap; gap: var(--space-4); font-size: 14px; color: var(--text-2); }
-.profile-counts strong { color: var(--text); font-weight: 700; font-variant-numeric: tabular-nums; }
+/* Profil : bannière (Facebook), puis bloc centré avec compteurs et boutons (TikTok). */
+.profile-head { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); margin-top: -52px; padding: 0 var(--space-4); text-align: center; position: relative; }
+.profile-name { font-size: 22px; font-weight: 700; line-height: 1.2; margin-top: var(--space-1); }
+.profile-handle { font-size: 14px; }
+.profile-bio { max-width: 46ch; }
+.profile-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: 100%; max-width: 440px; margin: var(--space-3) 0 var(--space-2); }
+.profile-stats div { display: flex; flex-direction: column-reverse; align-items: center; gap: 2px; }
+.profile-stats div + div { border-left: 1px solid var(--line); }
+.profile-stats dt { font-size: 12px; color: var(--text-3); }
+.profile-stats dd { margin: 0; font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.profile-actions { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); width: 100%; max-width: 440px; }
+.profile-actions .btn { min-height: 44px; }
+.profile-head .tags { justify-content: center; }
 .follows-you { margin-left: var(--space-2); padding: 2px 6px; border-radius: var(--radius-s); background: var(--surface-2); color: var(--text-2); font: 500 11px var(--font); }
 
 /* ---------- Menu ⋯ et images ---------- */
@@ -607,3 +618,27 @@ a.list-item:hover, button.list-item:hover { background: var(--surface); }
 .link-card-site { font-size: 11px; color: var(--text-3); text-transform: lowercase; }
 .link-card-title { font-size: 14px; font-weight: 600; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .link-card-desc { font-size: 12px; color: var(--text-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* Menu déroulant : flèche dessinée, même hauteur que les champs. */
+.select-wrap { position: relative; }
+.select-wrap .select { appearance: none; -webkit-appearance: none; padding-right: 44px; cursor: pointer; }
+.select-wrap::after {
+  content: ''; position: absolute; right: 18px; top: 50%; width: 8px; height: 8px; margin-top: -6px;
+  border-right: 2px solid var(--text-2); border-bottom: 2px solid var(--text-2); transform: rotate(45deg); pointer-events: none;
+}
+.select-wrap .select:invalid, .select-wrap .select option[value=''] { color: var(--text-3); }
+.feed-more { display: grid; place-items: center; min-height: 72px; color: var(--text-2); }
+.feed-end { padding: var(--space-6) var(--space-4) var(--space-7); text-align: center; font-size: 13px; color: var(--text-3); }
+
+/* ---------- Pages légales et signature ---------- */
+.legal-body { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-2) var(--space-4) var(--space-5); line-height: 1.6; color: var(--text-2); }
+.legal-body h2 { margin-top: var(--space-4); font-size: 17px; color: var(--text); }
+.legal-body ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: var(--space-2); }
+.legal-body strong { color: var(--text); }
+.legal-body a { color: var(--accent); }
+.credits { padding: var(--space-3) var(--space-2) var(--space-5); font-size: 12px; color: var(--text-3); }
+.credits a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.credits a:hover { color: var(--text); }
+.credits strong { color: var(--text-2); font-weight: 600; }
+
+.sheet:focus { outline: none; }

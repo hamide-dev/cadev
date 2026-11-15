@@ -7,6 +7,7 @@ export const SPECIALTIES: Record<Specialty, string> = {
   MOBILE: 'Mobile',
   DATA_AI: 'Data/IA',
   DEVOPS: 'DevOps',
+  VIBE_CODING: 'Vibe coding',
 };
 export const LEVELS: Record<Level, string> = {
   LEARNING: 'En apprentissage',
@@ -14,7 +15,7 @@ export const LEVELS: Record<Level, string> = {
   CONFIRMED: 'Confirmé',
   SENIOR: 'Senior',
 };
-export const INTERESTS = ['JavaScript', 'TypeScript', 'React', 'Vue.js', 'Node.js', 'Python', 'Data/IA', 'DevOps', 'Accessibilité', 'Open source'];
+export const INTERESTS = ['JavaScript', 'TypeScript', 'React', 'Vue.js', 'Node.js', 'Python', 'Data/IA', 'DevOps', 'Accessibilité', 'Open source', 'Vibe coding'];
 
 export function roleLine(user: { specialty: Specialty | null; experienceLevel: Level | null }): string {
   return [user.specialty && SPECIALTIES[user.specialty], user.experienceLevel && LEVELS[user.experienceLevel]]

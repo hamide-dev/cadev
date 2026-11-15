@@ -1,7 +1,7 @@
 // Types calqués sur les DTO publics du back (src/modules/*/domain/*.types.ts) :
 // ne rien ajouter que le back ne renvoie pas.
 
-export type Specialty = 'FRONT_END' | 'BACK_END' | 'FULL_STACK' | 'MOBILE' | 'DATA_AI' | 'DEVOPS';
+export type Specialty = 'FRONT_END' | 'BACK_END' | 'FULL_STACK' | 'MOBILE' | 'DATA_AI' | 'DEVOPS' | 'VIBE_CODING';
 export type Level = 'LEARNING' | 'JUNIOR' | 'CONFIRMED' | 'SENIOR';
 export type PostType = 'ARTICLE' | 'QUESTION' | 'PROJECT_LAUNCH';
 
@@ -22,6 +22,8 @@ export interface User {
   // Présents sur la fiche d'un profil (GET /users/:username).
   followerCount?: number;
   followingCount?: number;
+  postCount?: number;
+  likeCount?: number;
   isFollowing?: boolean;
   followsYou?: boolean;
 }

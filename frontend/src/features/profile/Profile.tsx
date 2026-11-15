@@ -28,6 +28,13 @@ export function Banner({ user }: { user: User }) {
   );
 }
 
+// 1 234 → « 1,2 k », comme sur les réseaux sociaux.
+function formatCount(value: number): string {
+  if (value < 1000) return String(value);
+  if (value < 1_000_000) return `${(value / 1000).toFixed(value < 10_000 ? 1 : 0).replace('.', ',').replace(',0', '')} k`;
+  return `${(value / 1_000_000).toFixed(1).replace('.', ',').replace(',0', '')} M`;
+}
+
 export function Profile() {
   const me = useMe();
   const { username = '' } = useParams();
@@ -119,55 +126,53 @@ export function Profile() {
           )}
         </div>
       </div>
-      <div className="pad stack" style={{ marginTop: -48, position: 'relative' }}>
-        <div className="row-between wrap" style={{ alignItems: 'flex-end' }}>
-          {user.avatarUrl ? (
-            <button type="button" className="avatar-zoom" aria-label={`Voir la photo de ${user.displayName}`} onClick={() => openLightbox({ src: user.avatarUrl!, alt: user.displayName })}>
-              <Avatar user={user} size="xl" link={false} />
-            </button>
-          ) : (
+      <div className="profile-head">
+        {user.avatarUrl ? (
+          <button type="button" className="avatar-zoom" aria-label={`Voir la photo de ${user.displayName}`} onClick={() => openLightbox({ src: user.avatarUrl!, alt: user.displayName })}>
             <Avatar user={user} size="xl" link={false} />
+          </button>
+        ) : (
+          <Avatar user={user} size="xl" link={false} />
+        )}
+        <h1 className="profile-name">{user.displayName}</h1>
+        <p className="post-handle profile-handle">
+          @{user.username}
+          {!mine && profile.data.followsYou && <span className="follows-you">Vous suit</span>}
+        </p>
+        {roleLine(user) && <p className="small muted">{roleLine(user)}</p>}
+        <dl className="profile-stats">
+          <div><dt>Publications</dt><dd>{formatCount(profile.data.postCount ?? 0)}</dd></div>
+          <div><dt>Abonnés</dt><dd>{formatCount(followers)}</dd></div>
+          <div><dt>Abonnements</dt><dd>{formatCount(profile.data.followingCount ?? 0)}</dd></div>
+          <div><dt>J’aime</dt><dd>{formatCount(profile.data.likeCount ?? 0)}</dd></div>
+        </dl>
+        <div className="profile-actions">
+          {mine ? (
+            <>
+              <Link to="/profile/edit" className="btn btn-primary">
+                <Icon name="edit" size={18} /> Modifier le profil
+              </Link>
+              <Link to="/saved" className="btn" aria-label="Mes sauvegardes">
+                <Icon name="bookmark" size={18} /> Sauvegardes
+              </Link>
+            </>
+          ) : (
+            <>
+              <button type="button" className={`btn ${following ? '' : 'btn-primary'}`} aria-pressed={following} onClick={toggleFollow} disabled={busy}>
+                {friend ? 'Ami' : following ? 'Abonné' : 'Suivre'}
+              </button>
+              <button type="button" className="btn" onClick={message} disabled={busy}>
+                <Icon name="mail" size={18} /> Message
+              </button>
+            </>
           )}
-          <div className="row">
-            {mine ? (
-              <>
-                <Link to="/saved" className="icon-btn bordered" aria-label="Mes sauvegardes">
-                  <Icon name="bookmark" size={20} />
-                </Link>
-                <Link to="/profile/edit" className="btn btn-primary pill">
-                  <Icon name="edit" size={18} /> Modifier le profil
-                </Link>
-              </>
-            ) : (
-              <>
-                <button type="button" className="btn pill" onClick={message} disabled={busy}>
-                  <Icon name="mail" size={18} /> Message
-                </button>
-                <button type="button" className={`btn pill ${following ? '' : 'btn-primary'}`} aria-pressed={following} onClick={toggleFollow} disabled={busy}>
-                  {friend ? 'Ami' : following ? 'Abonné' : 'Suivre'}
-                </button>
-              </>
-            )}
-          </div>
         </div>
-        <div className="stack-s">
-          <h1 style={{ fontSize: 24, fontWeight: 700 }}>{user.displayName}</h1>
-          <p className="post-handle" style={{ fontSize: 14 }}>
-            @{user.username}
-            {!mine && profile.data.followsYou && <span className="follows-you">Vous suit</span>}
-          </p>
-          {roleLine(user) && <p className="small muted">{roleLine(user)}</p>}
-          {user.bio && <p className="post-text"><Linkify text={user.bio} /></p>}
-          {user.githubUrl && (
-            <a href={user.githubUrl} target="_blank" rel="noopener noreferrer" className="row link-accent small">
-              <Icon name="link" size={18} /> {user.githubUrl.replace(/^https:\/\/(www\.)?/, '')}
-            </a>
-          )}
-          <p className="profile-counts">
-            <span><strong>{followers}</strong> abonné{followers > 1 ? 's' : ''}</span>
-            <span><strong>{profile.data.followingCount ?? 0}</strong> abonnement{(profile.data.followingCount ?? 0) > 1 ? 's' : ''}</span>
-          </p>
-        </div>
+        {user.bio && <p className="post-text profile-bio"><Linkify text={user.bio} /></p>}
+        {user.githubUrl && (
+          <a href={user.githubUrl} target="_blank" rel="noopener noreferrer" className="row link-accent small">
+            <Icon name="link" size={18} /> {user.githubUrl.replace(/^https:\/\/(www\.)?/, '')}
+          </a>
+        )}
         {notice && <p className="alert info" role="status">{notice}</p>}
         {topics.length > 0 && (
           <div className="tags">

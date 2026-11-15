@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { Avatar } from '../../components/Avatar';
 import { Icon } from '../../components/Icon';
 import { TopBar } from '../../components/TopBar';
-import { api, type Level, type Specialty, uploadToCloudinary } from '../../lib/api';
-import { errorMessage, INTERESTS, LEVELS, SPECIALTIES } from '../../lib/format';
+import { api, type Level, uploadToCloudinary } from '../../lib/api';
+import { errorMessage, INTERESTS, LEVELS } from '../../lib/format';
 import { useMe, useSession } from '../../lib/session';
+import { SpecialtySelect } from '../../components/SpecialtySelect';
 import { Banner } from './Profile';
 
 export function EditProfile() {
@@ -112,16 +113,10 @@ export function EditProfile() {
             <label htmlFor="ep-github">Profil GitHub</label>
             <input id="ep-github" className="input" inputMode="url" placeholder="github.com/ton-pseudo" value={form.github} onChange={(e) => set('github', e.target.value)} />
           </div>
-          <fieldset className="field">
-            <legend className="label" style={{ marginBottom: 8 }}>Spécialité</legend>
-            <div className="choices">
-              {(Object.keys(SPECIALTIES) as Specialty[]).map((key) => (
-                <button key={key} type="button" className="choice" aria-pressed={form.specialty === key} onClick={() => set('specialty', key)}>
-                  {SPECIALTIES[key]}
-                </button>
-              ))}
-            </div>
-          </fieldset>
+          <div className="field">
+            <label className="label" htmlFor="ep-specialty">Spécialité</label>
+            <SpecialtySelect id="ep-specialty" value={form.specialty} onChange={(value) => set('specialty', value)} />
+          </div>
           <fieldset className="field">
             <legend className="label" style={{ marginBottom: 8 }}>Niveau</legend>
             <div className="choices two">

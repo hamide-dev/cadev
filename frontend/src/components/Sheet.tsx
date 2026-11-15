@@ -23,7 +23,9 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
 
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
-    ref.current?.querySelector<HTMLElement>('.sheet-body input, .sheet-body textarea, .sheet-body button')?.focus({ preventScroll: true });
+    // Le focus va au premier champ à remplir ; sinon à la fenêtre elle-même (pas de contour sur un bouton à l'ouverture).
+    const field = ref.current?.querySelector<HTMLElement>('.sheet-body input:not([type=hidden]), .sheet-body textarea, .sheet-body select');
+    (field ?? ref.current)?.focus({ preventScroll: true });
     const onKey = (event: KeyboardEvent) => event.key === 'Escape' && close();
     document.addEventListener('keydown', onKey);
     const overflow = document.body.style.overflow;
@@ -71,6 +73,7 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
         role="dialog"
         aria-modal="true"
         aria-label={title}
+        tabIndex={-1}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="sheet-grab" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
