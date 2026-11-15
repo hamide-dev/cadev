@@ -41,14 +41,9 @@ export function CodeBlock({ code, language }: { code: string; language?: string 
   return (
     <div className="code-block">
       <div className="code-toolbar">
-        <div className="code-window-controls" aria-hidden="true">
-          <span className="code-window-dot close" />
-          <span className="code-window-dot minimize" />
-          <span className="code-window-dot maximize" />
-        </div>
         <span className="code-language">{language || 'Code'}</span>
         <button type="button" className="code-copy" onClick={(event) => { event.preventDefault(); event.stopPropagation(); void copy(); }}>
-          <span aria-hidden="true">▣</span> {copied ? 'COPIED' : 'COPY CODE'}
+          <span aria-hidden="true">▣</span> {copied ? 'Copié' : 'Copier'}
         </button>
       </div>
       <pre className="code"><code>{highlightedCode(code)}</code></pre>

@@ -75,8 +75,7 @@ export function ProjectDetail() {
         onChange={setTab}
         tabs={[
           ['overview', 'Aperçu'],
-          ['tasks', 'Tâches'],
-          ['discussions', 'Discussions'],
+          ['tasks', `Tâches${tasks.data ? ` · ${tasks.data.length}` : ''}`],
         ]}
       />
       <div className="grow">
@@ -106,11 +105,6 @@ export function ProjectDetail() {
             )}
             {tasks.error ? <ErrorState message={tasks.error} onRetry={tasks.reload} /> : tasks.loading ? <Loading /> : tasks.data!.length ? tasks.data!.map((t) => <TaskRow key={t.id} task={t} projectId={id} />) : <Empty icon="check" title="Pas encore de tâche" />}
           </>
-        )}
-        {tab === 'discussions' && (
-          <Empty icon="chat" title="Discussions bientôt disponibles" action={<Link to="/messages" className="btn">Écrire à l’équipe en message</Link>}>
-            Le serveur ne gère pas encore les discussions de projet.
-          </Empty>
         )}
       </div>
       <div className="footer-cta row">

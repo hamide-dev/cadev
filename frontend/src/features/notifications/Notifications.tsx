@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Avatar } from '../../components/Avatar';
 import { Icon } from '../../components/Icon';
@@ -12,11 +12,18 @@ import { useLoad } from '../../lib/useLoad';
 export function Notifications() {
   const notifications = useLoad(() => api.notifications(), []);
   const [tab, setTab] = useState<'all' | 'mentions' | 'projects'>('all');
+  const unread = notifications.data?.filter((item) => !item.readAt).length ?? 0;
+
+  // Ouvrir l'écran vaut lecture : les pastilles restent visibles le temps de la visite, le compteur du menu tombe à zéro.
+  useEffect(() => {
+    if (!unread) return;
+    api.markNotificationsRead().then(() => window.dispatchEvent(new Event('hw:notifications-read'))).catch(() => {});
+  }, [unread]);
 
   const items = notifications.data?.filter((item) => tab === 'all' || (tab === 'mentions') === (item.type === 'MENTION')) ?? [];
   return (
     <main className="screen">
-      <TopBar avatar title="Notifications" right={<Link to="/settings" className="icon-btn" aria-label="Paramètres"><Icon name="gear" /></Link>} />
+      <TopBar avatar title="Notifications" sub={unread ? `${unread} non lue${unread > 1 ? 's' : ''}` : undefined} right={<Link to="/settings" className="icon-btn" aria-label="Paramètres"><Icon name="gear" /></Link>} />
       <Tabs
         label="Filtrer les notifications"
         value={tab}

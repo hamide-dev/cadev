@@ -104,6 +104,11 @@ export function Profile() {
         <div className="row-between wrap" style={{ alignItems: 'flex-end' }}>
           <Avatar user={user} size="xl" link={false} />
           <div className="row">
+            {mine && (
+              <Link to="/saved" className="icon-btn bordered" aria-label="Mes sauvegardes">
+                <Icon name="bookmark" size={20} />
+              </Link>
+            )}
             <button type="button" className="icon-btn bordered" aria-label="Partager le profil" onClick={share}>
               <Icon name="share" size={20} />
             </button>
@@ -114,7 +119,7 @@ export function Profile() {
             ) : (
               <>
                 <button type="button" className="btn" style={{ borderRadius: 999 }} onClick={message} disabled={busy}>
-                  {friend ? 'Message' : 'Message'}
+                  <Icon name="mail" size={18} /> Message
                 </button>
                 <button type="button" className={`btn ${following ? '' : 'btn-primary'}`} style={{ borderRadius: 999 }} aria-pressed={following} onClick={toggleFollow} disabled={busy}>
                   {friend ? 'Ami' : following ? 'Abonné' : 'Suivre'}
@@ -144,11 +149,6 @@ export function Profile() {
             ))}
           </div>
         )}
-        {mine && (
-          <Link to="/saved" className="btn btn-block">
-            <Icon name="bookmark" size={20} /> Sauvegardes
-          </Link>
-        )}
       </div>
       <div style={{ marginTop: 16 }}>
         <Tabs
@@ -158,7 +158,6 @@ export function Profile() {
           tabs={[
             ['posts', 'Publications'],
             ['projects', 'Projets'],
-            ['contributions', 'Contributions'],
           ]}
         />
       </div>
@@ -186,11 +185,6 @@ export function Profile() {
             {mine ? 'Ajoute un projet pour trouver des contributeurs.' : `${user.displayName} n’a pas encore créé de projet.`}
           </Empty>
         ))}
-      {tab === 'contributions' && (
-        <Empty icon="fork" title="Contributions bientôt visibles">
-          Le serveur ne liste pas encore les contributions d’un développeur.
-        </Empty>
-      )}
     </main>
   );
 }

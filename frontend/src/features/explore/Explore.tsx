@@ -8,7 +8,7 @@ import { Empty, ErrorState, Loading } from '../../components/states';
 import { PostCard } from '../posts/PostCard';
 import { RichText } from '../posts/RichText';
 import { api, type Post, type User } from '../../lib/api';
-import { errorMessage } from '../../lib/format';
+import { errorMessage, roleLine } from '../../lib/format';
 import { useMe } from '../../lib/session';
 import { useLoad } from '../../lib/useLoad';
 
@@ -38,6 +38,19 @@ export function Explore() {
       setFollowed(Object.fromEntries(followedUsernames.map((username) => [username, true])));
     }
   }, [followedUsernames]);
+
+  const search = (value: string) => {
+    setQuery(value);
+    setSubmittedQuery(value);
+    setDirectoryPage(1);
+  };
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSubmittedQuery(query);
+      setDirectoryPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query]);
 
   const q = submittedQuery.trim().toLowerCase();
   useEffect(() => {
@@ -80,33 +93,23 @@ export function Explore() {
     }
   };
 
-  const shownDevs = directory;
+  const shownDevs = tab === 'all' ? directory.slice(0, 4) : directory;
   const shownQuestions = questions.filter((p) => match(p.content, ...p.tags));
   const shownProjects = projects.filter((p) => match(p.name, p.description, ...p.technologies));
   const nothing = !shownDevs.length && !shownQuestions.length && !shownProjects.length;
 
   return (
     <main className="screen">
-      <TopBar
-        avatar
-        title="Explorer"
-        right={
-          <Link to="/publish" className="btn btn-primary mobile-only">
-            Publier
-          </Link>
-        }
-      />
-      <form className="pad row" style={{ paddingBottom: 12, gap: 8 }} onSubmit={(event) => { event.preventDefault(); setSubmittedQuery(query); setDirectoryPage(1); }}>
+      <TopBar avatar title="Explorer" />
+      <form className="pad row" style={{ paddingBottom: 12, gap: 8 }} role="search" onSubmit={(event) => { event.preventDefault(); search(query); }}>
         <label className="input-wrap grow">
           <span className="sr-only">Rechercher</span>
           <span style={{ position: 'absolute', left: 14, color: 'var(--text-3)' }}>
             <Icon name="search" size={22} />
           </span>
-          <input className="input" type="search" maxLength={100} style={{ paddingLeft: 46 }} placeholder="Nom ou pseudo" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <input className="input" type="search" maxLength={100} style={{ paddingLeft: 46, borderRadius: 999 }} placeholder="Développeurs, projets, questions…" value={query} onChange={(e) => setQuery(e.target.value)} />
         </label>
-        <button type="submit" className="btn btn-primary btn-s">Rechercher</button>
       </form>
-      {q && <p className="xs muted pad" style={{ marginTop: -4, paddingBottom: 8 }}>Résultats parmi les utilisateurs, projets et publications.</p>}
       <Tabs
         label="Catégories"
         value={tab}
@@ -129,7 +132,7 @@ export function Explore() {
               <h2 className="section-title">À explorer selon vos intérêts</h2>
               <div className="tags">
                 {me.interests.map((topic) => (
-                  <button key={topic} type="button" className="tag" style={{ border: 0, cursor: 'pointer', minHeight: 32 }} onClick={() => setQuery(topic)}>
+                  <button key={topic} type="button" className="tag" style={{ border: 0, cursor: 'pointer', minHeight: 32 }} onClick={() => search(topic)}>
                     {topic}
                   </button>
                 ))}
@@ -138,7 +141,10 @@ export function Explore() {
           )}
           {(tab === 'all' || tab === 'devs') && (
             <section className="section stack">
-              <h2 className="section-title">{tab === 'devs' ? 'Tous les utilisateurs' : 'Développeurs à découvrir'} · {directoryTotal}</h2>
+              <div className="row-between">
+                <h2 className="section-title">{tab === 'devs' ? `Développeurs · ${directoryTotal}` : 'Développeurs à découvrir'}</h2>
+                {tab === 'all' && directoryTotal > 4 && <button type="button" className="link small" onClick={() => setTab('devs')}>Tout voir</button>}
+              </div>
               {directoryLoading ? <Loading label="Recherche des utilisateurs…" /> : directoryError ? (
                 <div className="stack-s"><p className="error-text">{directoryError}</p><button className="btn btn-s" type="button" onClick={() => setDirectoryRetry((retry) => retry + 1)}>Réessayer</button></div>
               ) : shownDevs.length ? shownDevs.map((dev) => (
@@ -146,14 +152,14 @@ export function Explore() {
                   <Avatar user={dev} />
                   <Link to={`/u/${dev.username}`} className="grow" style={{ textDecoration: 'none' }}>
                     <p className="strong">{dev.displayName}</p>
-                    <p className="post-handle">@{dev.username}</p>
+                    <p className="post-handle">@{dev.username}{roleLine(dev) ? ` · ${roleLine(dev)}` : ''}</p>
                   </Link>
                   <button type="button" className={`btn btn-s ${followed[dev.username] ? '' : 'btn-primary'}`} aria-pressed={!!followed[dev.username]} onClick={() => toggleFollow(dev.username)}>
-                    {followed[dev.username] ? 'Abonné' : 'Suivre'}
+                    {followed[dev.username] ? 'Suivi' : 'Suivre'}
                   </button>
                 </div>
               )) : <p className="small muted">{q ? 'Aucun utilisateur ne correspond à cette recherche.' : 'Aucun utilisateur à afficher.'}</p>}
-              {!directoryLoading && !directoryError && directoryTotal > 0 && (
+              {tab === 'devs' && !directoryLoading && !directoryError && directoryTotal > 20 && (
                 <div className="row-between" style={{ paddingTop: 8 }}>
                   <button type="button" className="btn btn-s" disabled={directoryPage <= 1} onClick={() => setDirectoryPage((page) => Math.max(1, page - 1))}>Précédent</button>
                   <span className="xs muted">Page {directoryPage} sur {Math.max(1, Math.ceil(directoryTotal / 20))}</span>

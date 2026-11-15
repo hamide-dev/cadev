@@ -4,11 +4,17 @@ import { PostCard } from './PostCard';
 import { type Post } from '../../lib/api';
 import { errorMessage } from '../../lib/format';
 
+type FeedPage = { items: Post[]; nextCursor: string | null; hasMore: boolean };
+
+// Dernière première page vue par fil : au retour sur un écran, elle s'affiche tout de suite puis se met à jour.
+const pageCache = new Map<string, FeedPage>();
+
 // Liste paginée par curseur, partagée par les fils et le profil.
-export function PostFeed({ load, empty }: { load: (cursor?: string | null) => Promise<{ items: Post[]; nextCursor: string | null; hasMore: boolean }>; empty: ReactNode }) {
-  const [items, setItems] = useState<Post[] | null>(null);
-  const [cursor, setCursor] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(false);
+export function PostFeed({ load, empty, cacheKey }: { load: (cursor?: string | null) => Promise<FeedPage>; empty: ReactNode; cacheKey?: string }) {
+  const cached = cacheKey ? pageCache.get(cacheKey) : undefined;
+  const [items, setItems] = useState<Post[] | null>(cached?.items ?? null);
+  const [cursor, setCursor] = useState<string | null>(cached?.nextCursor ?? null);
+  const [hasMore, setHasMore] = useState(cached?.hasMore ?? false);
   const [error, setError] = useState<string | null>(null);
   const [more, setMore] = useState(false);
 
@@ -17,6 +23,7 @@ export function PostFeed({ load, empty }: { load: (cursor?: string | null) => Pr
       setError(null);
       try {
         const page = await load(from);
+        if (!from && cacheKey) pageCache.set(cacheKey, page);
         setItems((prev) => (from && prev ? [...prev, ...page.items] : page.items));
         setCursor(page.nextCursor);
         setHasMore(page.hasMore);
@@ -24,13 +31,13 @@ export function PostFeed({ load, empty }: { load: (cursor?: string | null) => Pr
         setError(errorMessage(err));
       }
     },
-    [load],
+    [load, cacheKey],
   );
 
   useEffect(() => {
-    setItems(null);
+    if (!cacheKey || !pageCache.has(cacheKey)) setItems(null);
     fetchPage(null);
-  }, [fetchPage]);
+  }, [fetchPage, cacheKey]);
 
   if (error && !items) return <ErrorState message={error} onRetry={() => fetchPage(null)} />;
   if (!items) return <Loading />;

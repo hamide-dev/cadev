@@ -247,36 +247,18 @@
   position: relative;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: var(--space-3);
-  min-height: 42px;
+  min-height: 38px;
   padding: 0 12px;
   border-bottom: 1px solid #2b2c31;
-  background: linear-gradient(#292a2e, #202125);
+  background: #1f2023;
   color: #a7a8ad;
   font: 500 11px var(--mono);
-  letter-spacing: .04em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
-.code-window-controls {
-  position: absolute;
-  left: 13px;
-  display: flex;
-  gap: 7px;
-}
-.code-window-dot {
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,.18);
-}
-.code-window-dot.close { background: #ff5f57; }
-.code-window-dot.minimize { background: #febc2e; }
-.code-window-dot.maximize { background: #28c840; }
 .code-language {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
   color: #c3c4c8;
   font-size: 11px;
   letter-spacing: 0;
@@ -392,7 +374,7 @@ a.list-item:hover, button.list-item:hover { background: var(--surface); }
 .banner {
   height: 128px;
   padding: var(--space-3) var(--space-4) var(--space-3) 72px;
-  background: linear-gradient(135deg, #1b1338, #23205a 60%, #1c2a52);
+  background: #1a1824;
   color: rgba(183, 154, 255, 0.55);
   font: 400 13px/1.6 var(--mono);
   white-space: pre;
@@ -444,3 +426,36 @@ a.list-item:hover, button.list-item:hover { background: var(--surface); }
   .notfound-actions .btn-block { width: auto; padding: 0 var(--space-6); }
 }
 @media (prefers-reduced-motion: reduce) { .cursor { animation: none; } }
+
+/* ---------- Finitions CADEV : composer rapide, actions, badges ---------- */
+.ellipsis { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.btn.pill { border-radius: var(--radius-full); }
+
+/* Zone « Quoi de neuf ? » en tête du fil */
+.quick-compose { display: flex; gap: var(--space-3); padding: var(--space-4); border-bottom: 1px solid var(--line); }
+.quick-compose-input {
+  display: flex; align-items: center;
+  min-height: 48px; padding: 0 var(--space-4);
+  border: 1px solid var(--border); border-radius: var(--radius-full);
+  background: var(--surface); color: var(--text-3);
+  font-size: 15px; text-decoration: none;
+  transition: border-color 150ms var(--ease), color 150ms var(--ease);
+}
+.quick-compose-input:hover { border-color: var(--border-input); color: var(--text-2); }
+.quick-compose-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.chip-action {
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: 36px; padding: 0 var(--space-3);
+  border-radius: var(--radius-full);
+  color: var(--text-2); font-size: 13px; font-weight: 500; text-decoration: none;
+}
+.chip-action svg { color: var(--accent); }
+.chip-action:hover { background: var(--surface); color: var(--text); }
+
+/* Publications : survol discret, badges de type lisibles */
+.post { transition: background-color 150ms var(--ease); }
+.post:hover { background: rgba(255, 255, 255, 0.015); }
+.post-actions { gap: var(--space-2); }
+.action[data-kind='save'][aria-pressed='true'] { color: var(--accent); }
+.tag.type-question { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
+.tag.type-project_launch { background: var(--success-bg); color: var(--success); font-weight: 600; }

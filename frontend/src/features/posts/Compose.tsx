@@ -23,7 +23,7 @@ export function Compose() {
   const initial = (COMPOSE_TABS.find(([t]) => t.toLowerCase() === params.get('type')) ?? COMPOSE_TABS[0])[0];
   const [type, setType] = useState<PostType>(initial);
   const [content, setContent] = useState('');
-  const [code, setCode] = useState<string | null>(null);
+  const [code, setCode] = useState<string | null>(params.get('code') ? '' : null);
   const [repo, setRepo] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [media, setMedia] = useState<Media[]>([]);
@@ -79,26 +79,17 @@ export function Compose() {
 
   return (
     <main className="screen">
-      <TopBar
-        title="Publier"
-        right={
-          <button type="button" className="btn" onClick={() => navigate(-1)}>
-            Annuler
-          </button>
-        }
-      />
+      <TopBar back title="Nouvelle publication" />
       <Tabs label="Type de publication" tabs={COMPOSE_TABS} value={type} onChange={setType} />
       <div className="section row" style={{ gap: 12 }}>
         <Avatar user={me} link={false} />
         <div className="grow">
           <p className="strong">{me.displayName}</p>
-          <p className="post-handle">@{me.username}</p>
-          <p className="xs muted">{roleLine(me)}</p>
+          <p className="xs muted row" style={{ gap: 4 }}>
+            <Icon name="globe" size={14} /> Public{roleLine(me) ? ` · ${roleLine(me)}` : ''}
+          </p>
         </div>
       </div>
-      <p className="row section small muted">
-        <Icon name="globe" size={18} /> Public · communauté de développeurs
-      </p>
       <section className="section stack">
         <label className="label" htmlFor="content">
           {type === 'QUESTION' ? 'Votre question' : type === 'PROJECT_LAUNCH' ? 'Présentez le projet' : 'Votre publication'}
@@ -233,8 +224,8 @@ export function Compose() {
           </p>
         )}
         <div className="row">
-          <button type="button" className="btn" style={{ minHeight: 52 }} disabled={!!busy} onClick={() => submit(true)}>
-            {busy === 'draft' ? <span className="spinner" /> : 'Brouillon'}
+          <button type="button" className="btn btn-ghost" style={{ minHeight: 52 }} disabled={!!busy} onClick={() => submit(true)}>
+            {busy === 'draft' ? <span className="spinner" /> : 'Enregistrer en brouillon'}
           </button>
           <button type="button" className="btn btn-primary btn-block grow" disabled={!!busy || uploading} onClick={() => submit(false)}>
             {busy === 'publish' ? <span className="spinner" aria-label="Publication en cours" /> : label}

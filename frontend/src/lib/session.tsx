@@ -34,7 +34,8 @@ function setStoredUser(user: User | null): void {
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [user, setUserState] = useState<User | null>(() => getStoredUser());
-  const [ready, setReady] = useState(false);
+  // Un profil en cache suffit pour afficher l'app tout de suite : /users/me confirme la session en arrière-plan.
+  const [ready, setReady] = useState(() => getStoredUser() !== null);
 
   const signOut = useCallback(async () => {
     try {

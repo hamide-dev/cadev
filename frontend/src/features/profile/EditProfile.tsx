@@ -79,7 +79,7 @@ export function EditProfile() {
   return (
     <main className="screen">
       <form onSubmit={save} className="stack" noValidate style={{ flex: 1 }}>
-        <TopBar back title="Modifier le profil" sub="Retour au profil" right={<button type="button" className="btn btn-ghost" onClick={() => navigate(-1)}>Annuler</button>} />
+        <TopBar back title="Modifier le profil" />
         <div className="edit-banner">
           <Banner user={me} />
           <label className="btn edit-banner-btn">
