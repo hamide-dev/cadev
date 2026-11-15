@@ -18,6 +18,14 @@ export interface PublicConversation {
   name: string | null;
   members: Array<Pick<PublicUser, 'id' | 'username' | 'displayName' | 'avatarUrl'>>;
   unreadCount: number;
+  /** Aperçu du dernier message, pour savoir d'où vient un non-lu sans ouvrir chaque conversation. */
+  lastMessage: {
+    senderId: string;
+    senderName: string;
+    type: MessageType;
+    content: string;
+    createdAt: string;
+  } | null;
   createdAt: string;
 }
 

@@ -12,9 +12,10 @@ import { MessageEntity } from '../infrastructure/message.entity.js';
 import { UserEntity } from '../../users/infrastructure/user.entity.js';
 
 describe('MessagingService', () => {
-  it('returns unread message counts for each conversation', async () => {
+  it('returns unread counts and the last message, most active conversation first', async () => {
     const userId = '9dd1e06a-983c-4d68-b507-c611ca65e567';
     const conversationId = '292bbd98-e066-4550-9dbc-bb2debc54468';
+    const quietConversationId = '7c4e2a1b-3d5f-4e6a-8b9c-0d1e2f3a4b5c';
     const conversationsQuery = {
       innerJoin: vi.fn().mockReturnThis(),
       leftJoinAndSelect: vi.fn().mockReturnThis(),
@@ -31,6 +32,34 @@ describe('MessagingService', () => {
             },
           ],
           createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        },
+        {
+          id: quietConversationId,
+          type: 'DIRECT',
+          name: null,
+          members: [
+            {
+              user: { id: userId, username: 'me', displayName: 'Me' },
+            },
+          ],
+          createdAt: new Date('2026-01-01T12:00:00.000Z'),
+        },
+      ]),
+    };
+    const lastMessageQuery = {
+      distinctOn: vi.fn().mockReturnThis(),
+      leftJoinAndSelect: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      orderBy: vi.fn().mockReturnThis(),
+      addOrderBy: vi.fn().mockReturnThis(),
+      getMany: vi.fn().mockResolvedValue([
+        {
+          conversationId,
+          senderId: 'b1f0f7a4-5d0e-4a8e-9a43-2f3c1d9e6a10',
+          sender: { displayName: 'Awa' },
+          type: 'TEXT',
+          content: 'Tu as vu ma PR ?',
+          createdAt: new Date('2026-01-02T10:00:00.000Z'),
         },
       ]),
     };
@@ -60,7 +89,12 @@ describe('MessagingService', () => {
             createQueryBuilder: vi.fn().mockReturnValue(unreadQuery),
           },
         },
-        { provide: getRepositoryToken(MessageEntity), useValue: {} },
+        {
+          provide: getRepositoryToken(MessageEntity),
+          useValue: {
+            createQueryBuilder: vi.fn().mockReturnValue(lastMessageQuery),
+          },
+        },
         { provide: getRepositoryToken(UserEntity), useValue: {} },
         { provide: DataSource, useValue: {} },
         {
@@ -74,7 +108,16 @@ describe('MessagingService', () => {
     await expect(
       testingModule.get(MessagingService).listConversations(userId),
     ).resolves.toMatchObject([
-      { id: conversationId, unreadCount: 3 },
+      {
+        id: conversationId,
+        unreadCount: 3,
+        lastMessage: {
+          senderName: 'Awa',
+          content: 'Tu as vu ma PR ?',
+          createdAt: '2026-01-02T10:00:00.000Z',
+        },
+      },
+      { id: quietConversationId, lastMessage: null },
     ]);
     expect(unreadQuery.leftJoin).toHaveBeenCalledWith(
       MessageEntity,

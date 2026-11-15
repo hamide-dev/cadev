@@ -149,10 +149,43 @@ export class MessagingService {
     const unreadByConversation = new Map(
       unreadRows.map((row) => [row.conversationId, Number(row.unreadCount)]),
     );
-    return conversations.map((conversation) => ({
-      ...mapConversation(conversation),
-      unreadCount: unreadByConversation.get(conversation.id) ?? 0,
-    }));
+    // Dernier message de chaque conversation (DISTINCT ON, servi par l'index conversation + date).
+    const lastMessages = await this.messages
+      .createQueryBuilder('message')
+      .distinctOn(['message.conversationId'])
+      .leftJoinAndSelect('message.sender', 'sender')
+      .where('message.conversationId IN (:...conversationIds)', {
+        conversationIds: conversations.map((conversation) => conversation.id),
+      })
+      .orderBy('message.conversationId')
+      .addOrderBy('message.createdAt', 'DESC')
+      .addOrderBy('message.id', 'DESC')
+      .getMany();
+    const lastByConversation = new Map(
+      lastMessages.map((message) => [message.conversationId, message]),
+    );
+    const activity = (item: PublicConversation) =>
+      item.lastMessage?.createdAt ?? item.createdAt;
+    // ponytail: tri par activité fait sur les 100 conversations les plus récentes ;
+    // une colonne lastMessageAt indexée si un utilisateur en dépasse 100.
+    return conversations
+      .map((conversation) => {
+        const last = lastByConversation.get(conversation.id);
+        return {
+          ...mapConversation(conversation),
+          unreadCount: unreadByConversation.get(conversation.id) ?? 0,
+          lastMessage: last
+            ? {
+                senderId: last.senderId,
+                senderName: last.sender.displayName,
+                type: last.type,
+                content: last.content.slice(0, 140),
+                createdAt: last.createdAt.toISOString(),
+              }
+            : null,
+        };
+      })
+      .sort((a, b) => activity(b).localeCompare(activity(a)));
   }
 
   async getConversation(
@@ -351,6 +384,7 @@ function mapConversation(conversation: ConversationEntity): PublicConversation {
     type: conversation.type,
     name: conversation.name,
     unreadCount: 0,
+    lastMessage: null,
     members: conversation.members.map((member) => ({
       id: member.user.id,
       username: member.user.username,
