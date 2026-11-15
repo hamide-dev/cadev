@@ -16,7 +16,7 @@ export interface PublicConversation {
   id: string;
   type: ConversationType;
   name: string | null;
-  members: Array<Pick<PublicUser, 'id' | 'username' | 'displayName'>>;
+  members: Array<Pick<PublicUser, 'id' | 'username' | 'displayName' | 'avatarUrl'>>;
   unreadCount: number;
   createdAt: string;
 }

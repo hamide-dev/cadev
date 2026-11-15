@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Brand } from '../../components/Brand';
+import { Credits } from '../legal/Legal';
 
 export function Welcome() {
   return (
@@ -27,6 +28,7 @@ export function Welcome() {
               Se connecter
             </Link>
           </p>
+          <Credits className="center" />
         </div>
       </div>
     </main>

@@ -1,13 +1,15 @@
 ﻿import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Avatar } from '../../components/Avatar';
 import { Brand } from '../../components/Brand';
 import { Icon } from '../../components/Icon';
 import { BackButton } from '../../components/TopBar';
 import { OtpInput } from './OtpInput';
 import { api, ApiError, type Level, type Specialty } from '../../lib/api';
-import { EMAIL_PATTERN, errorMessage, INTERESTS, LEVELS, roleLine, SPECIALTIES } from '../../lib/format';
+import { EMAIL_PATTERN, errorMessage, INTERESTS, LEVELS, roleLine } from '../../lib/format';
 import { useSession } from '../../lib/session';
+import { SpecialtySelect } from '../../components/SpecialtySelect';
+import { markInstallPending } from '../../lib/install';
 
 /**
  * Nouveau flux d'inscription en 5 etapes :
@@ -130,6 +132,7 @@ export function Signup() {
         setUser(await api.updateMe({ specialty: profile.specialty, experienceLevel: profile.experienceLevel, bio: profile.bio.trim() || undefined, githubUrl }));
       } else if (step === 4) {
         setUser(await api.updateMe({ interests }));
+        markInstallPending();
         return navigate('/feed');
       }
       setStep(step + 1);
@@ -352,17 +355,11 @@ export function Signup() {
         {/* ── Etape 3 : profil developpeur ── */}
         {step === 3 && (
           <div className="stack">
-            <fieldset className="field">
-              <legend className="label" style={{ marginBottom: 8 }}>Votre spécialité</legend>
-              <div className="choices">
-                {(Object.keys(SPECIALTIES) as Specialty[]).map((key) => (
-                  <button key={key} type="button" className="choice" aria-pressed={profile.specialty === key} onClick={() => setProfile((p) => ({ ...p, specialty: key }))}>
-                    {profile.specialty === key && <Icon name="check" size={16} />} {SPECIALTIES[key]}
-                  </button>
-                ))}
-              </div>
+            <div className="field">
+              <label className="label" htmlFor="su-specialty">Votre spécialité</label>
+              <SpecialtySelect id="su-specialty" value={profile.specialty} onChange={(value) => setProfile((p) => ({ ...p, specialty: value }))} />
               {fieldError('specialty')}
-            </fieldset>
+            </div>
             <fieldset className="field">
               <legend className="label" style={{ marginBottom: 8 }}>Votre niveau</legend>
               <div className="choices two">
@@ -422,7 +419,7 @@ export function Signup() {
 
         <div className="spacer" />
         <div className="footer-cta" style={{ padding: '8px 0 32px' }}>
-          {step === 4 && <p className="center xs muted" style={{ marginBottom: 12 }}>En créant votre compte, vous acceptez les Conditions et la Politique de confidentialité.</p>}
+          {step === 4 && <p className="center xs muted" style={{ marginBottom: 12 }}>En créant ton compte, tu acceptes les <Link to="/conditions" className="link">conditions d’utilisation</Link> et la <Link to="/confidentialite" className="link">politique de confidentialité</Link>.</p>}
           <button
             type="submit"
             className="btn btn-primary btn-block"

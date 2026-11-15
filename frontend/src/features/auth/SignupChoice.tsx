@@ -26,7 +26,7 @@ export function SignupChoice() {
               Se connecter
             </Link>
           </p>
-          <p className="center xs muted">En continuant, vous acceptez les Conditions et la Politique de confidentialité.</p>
+          <p className="center xs muted">En continuant, tu acceptes les <Link to="/conditions" className="link">conditions d’utilisation</Link> et la <Link to="/confidentialite" className="link">politique de confidentialité</Link>.</p>
         </div>
       </div>
     </main>

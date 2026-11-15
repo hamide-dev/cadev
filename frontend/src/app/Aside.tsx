@@ -6,6 +6,7 @@ import { api } from '../lib/api';
 import { roleLine } from '../lib/format';
 import { useMe } from '../lib/session';
 import { useLoad } from '../lib/useLoad';
+import { Credits } from '../features/legal/Legal';
 
 // Colonne de droite sur grand écran, uniquement des données réelles de l'API :
 // projets ouverts aux débutants et développeurs à suivre (ceux qu'on suit déjà sont écartés).
@@ -90,9 +91,7 @@ export function Aside() {
         </section>
       )}
 
-      <p className="xs muted" style={{ padding: '0 var(--space-2)' }}>
-        Hello World · le réseau social des développeurs, en Afrique d’abord.
-      </p>
+      <Credits />
     </aside>
   );
 }

@@ -5,6 +5,7 @@ export enum DeveloperSpecialty {
   MOBILE = 'MOBILE',
   DATA_AI = 'DATA_AI',
   DEVOPS = 'DEVOPS',
+  VIBE_CODING = 'VIBE_CODING',
 }
 
 export enum ExperienceLevel {
@@ -28,4 +29,14 @@ export interface PublicUser {
   interests: string[];
   technologies: string[];
   createdAt: string;
+}
+
+// Profil vu par quelqu'un : compteurs d'abonnés et lien avec la personne qui regarde.
+export interface ProfileView extends PublicUser {
+  followerCount: number;
+  followingCount: number;
+  postCount: number;
+  likeCount: number;
+  isFollowing: boolean;
+  followsYou: boolean;
 }

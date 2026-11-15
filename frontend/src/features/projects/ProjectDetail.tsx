@@ -11,6 +11,7 @@ import { ContributeSheet, NewTask } from './sheets';
 import { api, type Task } from '../../lib/api';
 import { findRepoUrl } from '../../lib/format';
 import { useMe } from '../../lib/session';
+import { shareLink } from '../../lib/share';
 import { useLoad } from '../../lib/useLoad';
 
 function TaskRow({ task, projectId }: { task: Task; projectId: string }) {
@@ -38,6 +39,7 @@ export function ProjectDetail() {
   const [tab, setTab] = useState<'overview' | 'tasks' | 'discussions'>('overview');
   const [contributing, setContributing] = useState(false);
   const [newTask, setNewTask] = useState(false);
+  const [copied, setCopied] = useState(false);
   const project = useLoad(() => api.project(id), [id]);
   const tasks = useLoad(() => api.tasks(id), [id]);
 
@@ -50,7 +52,25 @@ export function ProjectDetail() {
 
   return (
     <main className="screen">
-      <TopBar back title={p.name} />
+      <TopBar
+        back
+        title={p.name}
+        right={
+          <button
+            type="button"
+            className="icon-btn"
+            aria-label="Partager le projet"
+            onClick={async () => {
+              if ((await shareLink(`${p.name} sur Hello World`, `/projects/${p.id}`)) === 'copied') {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1800);
+              }
+            }}
+          >
+            <Icon name={copied ? 'check' : 'share'} size={20} />
+          </button>
+        }
+      />
       <section className="section stack-s">
         <div className="row-between">
           <h2 className="card-title" style={{ fontSize: 18 }}>{repoName(p)}</h2>

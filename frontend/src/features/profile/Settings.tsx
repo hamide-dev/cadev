@@ -3,6 +3,8 @@ import { Icon } from '../../components/Icon';
 import { TopBar } from '../../components/TopBar';
 import { PushSettings } from '../notifications/PushSettings';
 import { useMe, useSession } from '../../lib/session';
+import { openInstallPrompt } from '../../lib/install';
+import { Credits } from '../legal/Legal';
 
 function Row({ title, sub, value, to }: { title: string; sub?: string; value?: string; to?: string }) {
   const content = (
@@ -51,6 +53,25 @@ export function Settings() {
           <h2 className="section-title">Notifications</h2>
           <PushSettings />
         </section>
+        <section className="stack-s">
+          <h2 className="section-title">Application</h2>
+          <div className="group">
+            <button type="button" className="list-item" onClick={openInstallPrompt}>
+              <div className="grow">
+                <p className="small">Installer sur mon téléphone</p>
+                <p className="xs muted">iPhone et Android, depuis l’écran d’accueil</p>
+              </div>
+              <Icon name="chevron" size={20} />
+            </button>
+          </div>
+        </section>
+        <section className="stack-s">
+          <h2 className="section-title">À propos</h2>
+          <div className="group">
+            <Row title="Conditions d’utilisation" to="/conditions" />
+            <Row title="Politique de confidentialité" to="/confidentialite" />
+          </div>
+        </section>
         <button
           type="button"
           className="btn btn-danger btn-block"
@@ -62,6 +83,7 @@ export function Settings() {
         >
           <Icon name="logout" size={20} /> Se déconnecter
         </button>
+        <Credits className="center" />
       </div>
     </main>
   );

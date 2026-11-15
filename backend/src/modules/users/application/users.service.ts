@@ -8,7 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { createHash } from 'node:crypto';
 import { Repository } from 'typeorm';
 import { isUniqueViolation } from '../../../database/is-unique-violation.js';
-import type { PublicUser } from '../domain/user.types.js';
+import type { ProfileView, PublicUser } from '../domain/user.types.js';
 import { UserEntity } from '../infrastructure/user.entity.js';
 import { UserFollowEntity } from '../infrastructure/user-follow.entity.js';
 import type { UpdateProfileDto } from '../presentation/dto/update-profile.dto.js';
@@ -174,7 +174,7 @@ export class UsersService {
     return user;
   }
 
-  async findPublicByUsername(username: string): Promise<PublicUser> {
+  async findPublicByUsername(username: string, viewerId?: string): Promise<ProfileView> {
     const user = await this.users.findOneBy({ username });
     if (!user) {
       throw new NotFoundException({
@@ -182,7 +182,31 @@ export class UsersService {
         message: 'User not found.',
       });
     }
-    return toPublicUser(user);
+    // Publications publiées et « j'aime » reçus, lus directement en SQL pour ne pas coupler les modules.
+    const statsQuery = this.users.manager
+      .createQueryBuilder()
+      .select('COUNT(DISTINCT p.id)', 'postCount')
+      .addSelect('COUNT(l."postId")', 'likeCount')
+      .from('posts', 'p')
+      .leftJoin('post_likes', 'l', 'l."postId" = p.id')
+      .where('p."authorId" = :id AND p."isDraft" = false', { id: user.id })
+      .getRawOne<{ postCount: string; likeCount: string }>();
+    const [followerCount, followingCount, isFollowing, followsYou, stats] = await Promise.all([
+      this.follows.countBy({ followedId: user.id }),
+      this.follows.countBy({ followerId: user.id }),
+      viewerId && viewerId !== user.id ? this.follows.existsBy({ followerId: viewerId, followedId: user.id }) : false,
+      viewerId && viewerId !== user.id ? this.follows.existsBy({ followerId: user.id, followedId: viewerId }) : false,
+      statsQuery,
+    ]);
+    return {
+      ...toPublicUser(user, viewerId === user.id),
+      followerCount,
+      followingCount,
+      postCount: Number(stats?.postCount ?? 0),
+      likeCount: Number(stats?.likeCount ?? 0),
+      isFollowing,
+      followsYou,
+    };
   }
 
   async updateProfile(

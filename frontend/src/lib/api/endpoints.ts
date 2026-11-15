@@ -1,4 +1,4 @@
-import type { AuthResponse, Comment, Contribution, Media, Notification, Page, Post, PostType, Project, PushConfiguration, PushSubscriptionInput, RepoPreview, Task, UploadSignature, User, UserPage } from './types';
+import type { LinkPreview, AuthResponse, Comment, Contribution, Media, Notification, Page, Post, PostType, Project, PushConfiguration, PushSubscriptionInput, RepoPreview, Task, UploadSignature, User, UserPage } from './types';
 import { BASE, qs, request } from './client';
 export const api = {
   // Auth — nouveau flux en deux phases
@@ -73,6 +73,7 @@ export const api = {
     request<Contribution>('POST', `/projects/${projectId}/contributions`, { message, taskId }),
 
   repoPreview: (url: string) => request<RepoPreview>('GET', `/github-preview${qs({ url })}`),
+  linkPreview: (url: string) => request<LinkPreview>('GET', `/link-preview${qs({ url })}`),
 
   // Médias : signature côté back, envoi direct à Cloudinary, puis confirmation.
   profileSignature: () => request<UploadSignature>('POST', `/media/profile/signature?ts=${Date.now()}`),

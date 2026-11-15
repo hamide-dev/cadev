@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { Brand } from '../../components/Brand';
 import { Icon } from '../../components/Icon';
 import { api, type Level, type Specialty } from '../../lib/api';
-import { errorMessage, INTERESTS, LEVELS, SPECIALTIES } from '../../lib/format';
+import { errorMessage, INTERESTS, LEVELS } from '../../lib/format';
 import { useMe, useSession } from '../../lib/session';
+import { SpecialtySelect } from '../../components/SpecialtySelect';
+import { markInstallPending } from '../../lib/install';
 
 export function OAuthOnboarding() {
   const user = useMe();
@@ -35,6 +37,7 @@ export function OAuthOnboarding() {
         githubUrl: github.trim() || null,
       });
       setUser(updated);
+      markInstallPending();
       navigate('/feed', { replace: true });
     } catch (reason) {
       setError(errorMessage(reason));
@@ -52,16 +55,10 @@ export function OAuthOnboarding() {
           <p className="lead">Quelques informations pour personnaliser votre expérience.</p>
         </div>
         {error && <p className="alert" role="alert">{error}</p>}
-        <fieldset className="field" style={{ border: 0, padding: 0 }}>
-          <legend className="label">Votre spécialité</legend>
-          <div className="choices">
-            {(Object.keys(SPECIALTIES) as Specialty[]).map((item) => (
-              <button key={item} type="button" className="choice" aria-pressed={specialty === item} onClick={() => setSpecialty(item)}>
-                {specialty === item && <Icon name="check" size={16} />} {SPECIALTIES[item]}
-              </button>
-            ))}
-          </div>
-        </fieldset>
+        <div className="field">
+          <label className="label" htmlFor="oa-specialty">Votre spécialité</label>
+          <SpecialtySelect id="oa-specialty" value={specialty} onChange={setSpecialty} />
+        </div>
         <fieldset className="field" style={{ border: 0, padding: 0 }}>
           <legend className="label">Votre niveau</legend>
           <div className="choices two">

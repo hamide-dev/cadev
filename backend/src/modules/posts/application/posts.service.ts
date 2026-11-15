@@ -139,12 +139,13 @@ export class PostsService {
     username: string,
     cursor?: string,
     limit = 20,
+    viewerId?: string,
   ): Promise<PostPage> {
     const query = this.publicQuery().andWhere(
       'author.username = :username',
       { username: username.toLowerCase().replace(/^@/, '') },
     );
-    return this.fetchPage(query, cursor, limit);
+    return this.fetchPage(query, cursor, limit, viewerId);
   }
 
   async getById(id: string, viewerId?: string): Promise<PublicPost> {

@@ -6,6 +6,7 @@ import { Empty, ErrorState, Loading } from '../../components/states';
 import { repoName, TASK_STATUS } from './labels';
 import { ContributeSheet } from './sheets';
 import { api } from '../../lib/api';
+import { Linkify } from '../posts/RichText';
 import { useLoad } from '../../lib/useLoad';
 
 export function TaskDetail() {
@@ -21,7 +22,7 @@ export function TaskDetail() {
 
   return (
     <main className="screen">
-      <TopBar back={`/projects/${id}`} title={task.title} sub={`${project.name} · Retour aux tâches`} />
+      <TopBar back={`/projects/${id}`} title={task.title} sub={project.name} />
       <div className="pad stack" style={{ paddingTop: 8 }}>
         <p className="post-handle">{repoName(project)}</p>
         <div className="tags">
@@ -29,7 +30,7 @@ export function TaskDetail() {
           {task.isBeginnerFriendly && <span className="tag">good first issue</span>}
         </div>
         {task.assignedUser && <p className="small muted">Prise par {task.assignedUser.displayName} · @{task.assignedUser.username}</p>}
-        <p style={{ whiteSpace: 'pre-wrap' }}>{task.description}</p>
+        <p className="post-text"><Linkify text={task.description} /></p>
         {task.acceptanceCriteria.length > 0 && (
           <section className="stack-s">
             <h2 className="section-title">Critères d’acceptation</h2>
@@ -52,7 +53,7 @@ export function TaskDetail() {
           </button>
         )}
         {project.repositoryUrl && (
-          <a href={project.repositoryUrl} target="_blank" rel="noreferrer" className="btn btn-ghost btn-block">
+          <a href={project.repositoryUrl} target="_blank" rel="noopener noreferrer" className="btn btn-ghost btn-block">
             <Icon name="external" size={18} /> Voir le dépôt sur GitHub
           </a>
         )}

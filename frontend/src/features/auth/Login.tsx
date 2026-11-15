@@ -137,7 +137,7 @@ export function Login() {
             </Link>
           </div>
           <p className="center xs muted" style={{ paddingBottom: 24 }}>
-            En continuant, tu acceptes les règles de la communauté.
+            En continuant, tu acceptes les <Link to="/conditions" className="link">conditions d’utilisation</Link>.
           </p>
         </div>
       </form>
