@@ -31,8 +31,22 @@ Pour un déploiement Vercel, configure le dossier racine du projet sur
 Supprime `VITE_API_URL` des variables Vercel afin que les appels HTTP restent
 sur l'origine Vercel (les cookies de session OAuth sont alors de première
 partie), et définis `VITE_SOCKET_URL` sur l'URL Render du backend pour Socket.IO.
-Configure `GOOGLE_CALLBACK_URL` côté backend et l'URI autorisée dans Google sur
-`https://cadev-nine.vercel.app/api/v1/auth/google/callback`.
+Pour le domaine `https://www.hello-world.ci`, utilise exactement les valeurs
+suivantes :
+
+- `CORS_ORIGINS=https://www.hello-world.ci` dans les variables du backend
+  (cette origine doit être la première si plusieurs sont listées) ;
+- `GOOGLE_CALLBACK_URL=https://www.hello-world.ci/api/v1/auth/google/callback`
+  côté backend et la même URL comme URI de redirection autorisée dans Google ;
+- `GITHUB_CALLBACK_URL=https://www.hello-world.ci/api/v1/auth/github/callback`
+  côté backend et la même URL comme URL de callback dans GitHub.
+
+Les URLs configurées dans Google et GitHub doivent correspondre caractère par
+caractère aux variables du backend. Le callback du fournisseur est l'URL
+`/api/v1/auth/.../callback` ; `/oauth/callback` est la page frontend vers
+laquelle l'API redirige ensuite. Garder ces callbacks sur l'ancien domaine
+Vercel peut enregistrer le cookie sur ce domaine, puis rediriger vers le nouveau
+domaine sans session, ce qui provoque une réponse `401 Unauthorized`.
 
 ## Organisation
 
