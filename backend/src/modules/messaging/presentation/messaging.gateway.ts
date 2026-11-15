@@ -252,9 +252,20 @@ export class MessagingGateway implements OnGatewayInit {
         });
         void this.pushNotifications
           .sendToUser(member.id, {
-            title: 'Nouveau message',
-            body: `@${message.sender.username} vous a envoyé un message.`,
+            // Comme WhatsApp : le nom en titre, la photo à gauche, une notification par conversation.
+            // Le texte du message n'est jamais envoyé (confidentialité).
+            title: conversation.type === 'GROUP' && conversation.name ? conversation.name : message.sender.displayName,
+            body:
+              conversation.type === 'GROUP'
+                ? `${message.sender.displayName.split(' ')[0]} a écrit dans le groupe`
+                : message.type === 'CODE'
+                  ? 't’a envoyé un extrait de code'
+                  : message.type === 'LINK'
+                    ? 't’a envoyé un lien'
+                    : 't’a envoyé un message',
             url: `/messages/${input.conversationId}`,
+            icon: message.sender.avatarUrl,
+            tag: `conversation-${input.conversationId}`,
           })
           .catch((error: unknown) => {
             const name = error instanceof Error ? error.name : 'unknown error';

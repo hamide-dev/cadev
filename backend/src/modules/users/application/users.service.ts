@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createHash } from 'node:crypto';
 import { Repository } from 'typeorm';
@@ -20,6 +21,7 @@ export class UsersService {
     private readonly users: Repository<UserEntity>,
     @InjectRepository(UserFollowEntity)
     private readonly follows: Repository<UserFollowEntity>,
+    private readonly moduleRef?: ModuleRef,
   ) {}
 
   async create(input: {
@@ -274,6 +276,21 @@ export class UsersService {
       );
     } catch (error) {
       if (!isUniqueViolation(error)) throw error;
+      return;
+    }
+    void this.notifyFollow(followerId, followed.id);
+  }
+
+  // Prévient la personne suivie. Résolu à l'exécution pour éviter une dépendance circulaire
+  // (le module Notifications importe déjà le module Users). Un échec n'annule jamais l'abonnement.
+  private async notifyFollow(followerId: string, followedId: string): Promise<void> {
+    try {
+      const { NotificationsService } = await import('../../notifications/application/notifications.service.js');
+      const { NotificationType } = await import('../../notifications/infrastructure/notification.entity.js');
+      const notifications = this.moduleRef?.get(NotificationsService, { strict: false });
+      await notifications?.notifyUser(followerId, followedId, NotificationType.FOLLOW, null, null);
+    } catch {
+      // Notification facultative.
     }
   }
 

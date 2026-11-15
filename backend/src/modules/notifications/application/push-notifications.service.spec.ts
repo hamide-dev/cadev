@@ -60,7 +60,26 @@ describe('PushNotificationsService', () => {
     );
   });
 
-  it('rejects non-Google push endpoints to prevent server-side requests to arbitrary hosts', async () => {
+  it.each([
+    'https://web.push.apple.com/QGv7example',
+    'https://updates.push.services.mozilla.com/wpush/v2/example',
+    'https://wns2-par02p.notify.windows.com/w/?token=example',
+  ])('accepts the official push service %s (iPhone, Firefox, Edge)', async (official) => {
+    await expect(
+      service.saveSubscription('user-id', { endpoint: official, keys: { p256dh: 'public-key', auth: 'auth-key' } }),
+    ).resolves.toEqual({ subscribed: true });
+  });
+
+  it.each(['https://evil.example/push.apple.com', 'https://push.apple.com.evil.example/x', 'http://web.push.apple.com/x'])(
+    'rejects look-alike endpoint %s',
+    async (bad) => {
+      await expect(
+        service.saveSubscription('user-id', { endpoint: bad, keys: { p256dh: 'public-key', auth: 'auth-key' } }),
+      ).rejects.toMatchObject({ response: { code: 'INVALID_PUSH_ENDPOINT' } });
+    },
+  );
+
+  it('rejects unknown push endpoints to prevent server-side requests to arbitrary hosts', async () => {
     await expect(
       service.saveSubscription('user-id', {
         endpoint: 'https://127.0.0.1/internal',

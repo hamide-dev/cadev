@@ -6,6 +6,7 @@ export enum NotificationType {
   COMMENT = 'COMMENT',
   REPLY = 'REPLY',
   MENTION = 'MENTION',
+  FOLLOW = 'FOLLOW',
 }
 
 @Entity('notifications')

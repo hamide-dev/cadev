@@ -1,13 +1,14 @@
 import { Link } from 'react-router-dom';
-import { Brand } from '../../components/Brand';
+import { AnimatedLogo } from '../../components/AnimatedLogo';
 import { Credits } from '../legal/Legal';
 
 export function Welcome() {
   return (
     <main className="screen">
       <div className="auth">
-        <div className="center" style={{ paddingTop: 24 }}>
-          <Brand />
+        <div className="welcome-logo">
+          <AnimatedLogo size={112} replay />
+          <span className="mono">Hello World</span>
         </div>
         <div className="spacer" />
         <div className="stack center" style={{ gap: 8 }}>

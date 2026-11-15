@@ -6,6 +6,9 @@ import { Icon } from '../components/Icon';
 import { useMe } from '../lib/session';
 import { api } from '../lib/api';
 import { emit, getSocket, type Conversation } from '../lib/socket';
+import { showToast } from '../components/Toast';
+import { conversationTitle } from '../features/messages/format';
+import { ASK_PUSH_EVENT } from '../features/notifications/NotificationPrompt';
 
 const NAV = [
   { to: '/feed', label: 'Fil', long: 'Fil d’actualité', icon: 'home' },
@@ -34,18 +37,36 @@ export function Nav() {
         if (active) setMessageCount(0);
       });
     };
+    // Message reçu ailleurs que dans la conversation ouverte : bannière en haut de l'écran.
+    const announce = ({ conversationId }: { conversationId?: string }) => {
+      if (!conversationId || pathname === `/messages/${conversationId}`) return;
+      void emit<Conversation[]>('conversation:list').then((items) => {
+        const conversation = items.find((item) => item.id === conversationId);
+        if (!active || !conversation) return;
+        const other = conversation.members.find((member) => member.id !== me.id) ?? conversation.members[0];
+        showToast({
+          title: conversationTitle(conversation, me.id),
+          body: conversation.type === 'GROUP' ? 'Nouveau message dans le groupe' : 't’a envoyé un message',
+          to: `/messages/${conversationId}`,
+          user: other ? { username: other.username, displayName: other.displayName, avatarUrl: other.avatarUrl ?? null } : undefined,
+        });
+        window.dispatchEvent(new Event(ASK_PUSH_EVENT));
+      }).catch(() => {});
+    };
     const socket = getSocket();
     socket.on('message:created', updateMessageCount);
     socket.on('message:unread', updateMessageCount);
+    socket.on('message:unread', announce);
     socket.on('conversation:read', updateMessageCount);
     updateMessageCount();
     return () => {
       active = false;
       socket.off('message:created', updateMessageCount);
       socket.off('message:unread', updateMessageCount);
+      socket.off('message:unread', announce);
       socket.off('conversation:read', updateMessageCount);
     };
-  }, [pathname]);
+  }, [pathname, me.id]);
 
   // Recompté à chaque changement d'écran, remis à zéro dès que l'écran Notifications les marque comme lues.
   useEffect(() => {
