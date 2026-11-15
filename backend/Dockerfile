@@ -16,6 +16,6 @@ COPY --from=build /app/dist ./dist
 
 USER node
 EXPOSE 3000
-# Au démarrage : on applique d'abord les migrations en attente (celles déjà faites sont ignorées),
-# puis on lance l'API. Aucun réglage à faire dans l'hébergeur.
-CMD ["sh", "-c", "npm run migration:run:prod && exec node dist/main.js"]
+# L'API démarre directement. Les ajustements de schéma sans risque sont faits au démarrage
+# (src/database/schema-guard.service.ts). Les migrations complètes se lancent à part : npm run migration:run:prod.
+CMD ["node", "dist/main.js"]
