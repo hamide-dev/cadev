@@ -41,14 +41,19 @@
 }
 .nav-item:hover { color: var(--text); }
 .nav-item.active { color: var(--text); font-weight: 700; }
+/* Pastille posée sur le coin de l'icône, hors du flux : elle ne pousse ni l'icône ni le libellé. */
+.nav-item { position: relative; }
 .nav-badge {
+  position: absolute;
+  top: 4px;
+  left: calc(50% + 4px);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 6px;
-  margin-left: auto;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  box-shadow: 0 0 0 2px var(--bg);
   border-radius: var(--radius-full);
   background: var(--unread);
   color: #fff;
@@ -165,6 +170,7 @@
     font-size: 17px; border-radius: var(--radius-full);
   }
   .nav-item.active { background: var(--surface); }
+  .nav-badge { position: static; margin-left: auto; box-shadow: none; min-width: 20px; height: 20px; padding: 0 6px; }
   .nav-publish { width: auto; min-height: 52px; margin: var(--space-4) 0; }
   .nav-me {
     display: flex; align-items: center; gap: var(--space-3);
