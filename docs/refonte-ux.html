@@ -1,0 +1,292 @@
+<title>Refonte UX Hello World</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;600&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+  /* Une colonne de lecture, puis des paires avant / après côte à côte (empilées sur téléphone). Thème sombre de l'app, sans dégradés. */
+  :root {
+    color-scheme: dark;
+    --bg: #141414;
+    --surface: #1d1d1f;
+    --line: #2a2a2c;
+    --fg: #f5f5f5;
+    --fg-2: #b8b8c0;
+    --fg-3: #8b8b8f;
+    --accent: #b794ff;
+    --ok: #7ee787;
+    --ko: #ff9b9b;
+    --sans: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: "Geist Mono", ui-monospace, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 400 16px/1.55 var(--sans);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 40px 64px;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 56px; }
+  header { display: flex; flex-direction: column; gap: 14px; max-width: 70ch; }
+  .brand { font: 600 15px var(--mono); color: var(--fg-2); }
+  h1 { margin: 0; font-size: clamp(28px, 4vw, 40px); line-height: 1.15; text-wrap: balance; }
+  h2 { margin: 0; font-size: 22px; line-height: 1.25; text-wrap: balance; }
+  p { margin: 0; }
+  .lead { color: var(--fg-2); font-size: 17px; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { font: 400 12px var(--mono); color: var(--fg-2); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; }
+  .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+  .summary div { border-top: 1px solid var(--line); padding-top: 14px; display: flex; flex-direction: column; gap: 6px; }
+  .summary strong { font-size: 15px; }
+  .summary span { color: var(--fg-2); font-size: 14px; }
+  section.screen { display: flex; flex-direction: column; gap: 20px; border-top: 1px solid var(--line); padding-top: 32px; }
+  .notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+  .notes h3 { margin: 0 0 8px; font: 600 12px var(--mono); letter-spacing: .04em; text-transform: uppercase; }
+  .notes .bad h3 { color: var(--ko); }
+  .notes .good h3 { color: var(--ok); }
+  .notes ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; color: var(--fg-2); font-size: 15px; }
+  .notes li::marker { color: var(--fg-3); }
+  .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+  .pair.phone { grid-template-columns: repeat(2, minmax(0, 300px)); justify-content: start; gap: 24px; }
+  figure { margin: 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  figcaption { font: 600 12px var(--mono); letter-spacing: .04em; text-transform: uppercase; color: var(--fg-3); }
+  figure.after figcaption { color: var(--ok); }
+  figure img { width: 100%; height: auto; display: block; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+  .pair.phone img { border-radius: 22px; }
+  .pair.logos { grid-template-columns: repeat(2, max-content); gap: 48px; }
+  .pair.logos svg { display: block; }
+  .next { display: flex; flex-direction: column; gap: 14px; }
+  .next ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; color: var(--fg-2); }
+  code { font: 400 .92em var(--mono); color: var(--accent); }
+  footer { color: var(--fg-3); font-size: 13px; }
+  @media (max-width: 640px) {
+    .pair, .pair.phone { grid-template-columns: minmax(0, 1fr); }
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="brand">Hello World&gt;_ · CADEV 2026</span>
+    <h1>Refonte UX avant la clôture des dépôts</h1>
+    <p class="lead">Ce qui n’allait pas dans l’app et ce qu’on a changé, écran par écran. Règle suivie : on retire tout ce qui ne sert pas et on garde un seul chemin clair pour chaque action.</p>
+    <div class="meta">
+      <span class="chip">branche ux/finale-cadev</span>
+      <span class="chip">données de démo : Awa, Idriss, Mariam, Kofi</span>
+      <span class="chip">mêmes données avant et après</span>
+    </div>
+  </header>
+
+  <div class="summary">
+    <div><strong>Plus rapide</strong><span>L’app s’affiche tout de suite au lieu d’attendre le serveur. Le fil revient instantanément quand on change d’écran.</span></div>
+    <div><strong>Un seul bouton Publier</strong><span>Il apparaissait jusqu’à 3 fois sur un même écran. Sur mobile, il devient un bouton rond flottant.</span></div>
+    <div><strong>Fini les écrans « Bientôt »</strong><span>Onglets vides, réglages grisés et fonctions promises sont retirés. Ce qui reste fonctionne.</span></div>
+    <div><strong>Plus sobre</strong><span>Pas de dégradés, pas de pastilles tricolores, pas de liseré décoratif. Le logo officiel partout, sans cadre.</span></div>
+  </div>
+
+  <section class="screen">
+    <h2>Logo</h2>
+    <div class="notes">
+      <div class="bad"><h3>Avant</h3><ul>
+        <li>Le capuchon noir était posé dans un cadre blanc de 4 px : le chat flottait au milieu au lieu de toucher les bords.</li>
+        <li>Fond en dégradé, yeux écrits avec une police qui change selon l’appareil.</li>
+        <li>Dans l’e-mail, un simple « &gt;_ » à la place du logo.</li>
+      </ul></div>
+      <div class="good"><h3>Après</h3><ul>
+        <li>Logo de la maquette officielle : le noir va jusqu’aux bords, seuls les coins sont arrondis.</li>
+        <li>Aplat blanc, yeux dessinés : rendu identique partout (menu, écran de chargement, favicon).</li>
+        <li>Le même logo en tête de l’e-mail.</li>
+      </ul></div>
+    </div>
+    <div class="pair logos">
+      <figure><figcaption>Avant</figcaption>
+        <svg viewBox="0 0 64 64" width="112" height="112" role="img" aria-label="Ancien logo"><rect width="64" height="64" rx="14" fill="#e9e9e9"/><path d="M4 26 32 38 60 26V52a10 10 0 0 1-10 10H14A10 10 0 0 1 4 52z" fill="#000"/><text x="32" y="55" text-anchor="middle" fill="#fff" font-family="monospace" font-weight="700" font-size="15">&gt; &lt;</text></svg>
+      </figure>
+      <figure class="after"><figcaption>Après</figcaption>
+        <svg viewBox="0 0 64 64" width="112" height="112" role="img" aria-label="Nouveau logo"><clipPath id="lg"><rect width="64" height="64" rx="14"/></clipPath><g clip-path="url(#lg)"><rect width="64" height="64" fill="#fff"/><path d="M0 25 32 38.5 64 25V64H0z" fill="#000"/><path d="M16.5 43 24.5 48.5 16.5 54M47.5 43 39.5 48.5 47.5 54" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/></g></svg>
+      </figure>
+    </div>
+  </section>
+
+  <section class="screen">
+    <h2>Fil d’actualité, ordinateur</h2>
+    <div class="notes">
+      <div class="bad"><h3>Avant</h3><ul>
+        <li>Rien pour écrire depuis le fil : il fallait trouver « Publier » dans le menu.</li>
+        <li>Une phrase inutile sous les onglets.</li>
+        <li>Tags collés en une seule ligne illisible.</li>
+        <li>Pas de bouton pour sauvegarder ou partager.</li>
+      </ul></div>
+      <div class="good"><h3>Après</h3><ul>
+        <li>Zone « Quoi de neuf dans ton code ? » avec raccourcis Question, Code, Projet.</li>
+        <li>Tags séparés et type de publication lisible en un coup d’œil.</li>
+        <li>Sauvegarder et Partager sous chaque publication.</li>
+        <li>« Développeurs à découvrir » avec un bouton Suivre à droite.</li>
+      </ul></div>
+    </div>
+    <div class="pair">
+      <figure><figcaption>Avant</figcaption><img src="captures/avant-fil-desktop.png" alt="Ancien fil sur ordinateur" loading="lazy"></figure>
+      <figure class="after"><figcaption>Après</figcaption><img src="captures/apres-fil-desktop.png" alt="Nouveau fil sur ordinateur" loading="lazy"></figure>
+    </div>
+  </section>
+
+  <section class="screen">
+    <h2>Fil d’actualité, téléphone</h2>
+    <div class="notes">
+      <div class="bad"><h3>Avant</h3><ul>
+        <li>Un gros bouton « Publier » blanc en haut sur chaque écran.</li>
+        <li>Blocs de code avec trois pastilles rouge, jaune, vert.</li>
+      </ul></div>
+      <div class="good"><h3>Après</h3><ul>
+        <li>Recherche en haut à droite, Publier en bouton flottant au pouce.</li>
+        <li>Blocs de code sobres, bouton « Copier » en français.</li>
+      </ul></div>
+    </div>
+    <div class="pair phone">
+      <figure><figcaption>Avant</figcaption><img src="captures/avant-fil-mobile.png" alt="Ancien fil sur téléphone" loading="lazy"></figure>
+      <figure class="after"><figcaption>Après</figcaption><img src="captures/apres-fil-mobile.png" alt="Nouveau fil sur téléphone" loading="lazy"></figure>
+    </div>
+  </section>
+
+  <section class="screen">
+    <h2>Publier</h2>
+    <div class="notes">
+      <div class="bad"><h3>Avant</h3><ul>
+        <li>Trois boutons pour la même chose : Publier dans le menu, Publier en bas, Annuler en haut.</li>
+        <li>La colonne de suggestions distrait pendant qu’on écrit.</li>
+        <li>Identité affichée sur trois lignes, puis encore « Public ».</li>
+      </ul></div>
+      <div class="good"><h3>Après</h3><ul>
+        <li>Une flèche retour, un seul bouton Publier.</li>
+        <li>Écran centré sur l’écriture, sans colonne à droite.</li>
+        <li>Nom et visibilité tiennent sur deux lignes.</li>
+      </ul></div>
+    </div>
+    <div class="pair">
+      <figure><figcaption>Avant</figcaption><img src="captures/avant-publier-desktop.png" alt="Ancien écran Publier" loading="lazy"></figure>
+      <figure class="after"><figcaption>Après</figcaption><img src="captures/apres-publier-desktop.png" alt="Nouvel écran Publier" loading="lazy"></figure>
+    </div>
+  </section>
+
+  <section class="screen">
+    <h2>Explorer</h2>
+    <div class="notes">
+      <div class="bad"><h3>Avant</h3><ul>
+        <li>Il fallait cliquer sur « Rechercher » à chaque fois.</li>
+        <li>Cliquer un tag d’intérêt ne lançait pas la recherche.</li>
+        <li>Pagination « Page 1 sur 1 » dans l’onglet Tout.</li>
+      </ul></div>
+      <div class="good"><h3>Après</h3><ul>
+        <li>Recherche pendant la frappe, sans bouton.</li>
+        <li>Un tag lance la recherche directement.</li>
+        <li>Spécialité et niveau affichés sous chaque développeur.</li>
+      </ul></div>
+    </div>
+    <div class="pair phone">
+      <figure><figcaption>Avant</figcaption><img src="captures/avant-explorer-mobile.png" alt="Ancien écran Explorer" loading="lazy"></figure>
+      <figure class="after"><figcaption>Après</figcaption><img src="captures/apres-explorer-mobile.png" alt="Nouvel écran Explorer" loading="lazy"></figure>
+    </div>
+  </section>
+
+  <section class="screen">
+    <h2>Notifications</h2>
+    <div class="notes">
+      <div class="bad"><h3>Avant</h3><ul>
+        <li>La pastille rouge ne baissait jamais : rien ne marquait les notifications comme lues.</li>
+      </ul></div>
+      <div class="good"><h3>Après</h3><ul>
+        <li>Ouvrir l’écran marque tout comme lu. La pastille du menu tombe à zéro.</li>
+        <li>Nombre de non lues affiché sous le titre. Nouvelle route serveur <code>PATCH /notifications/read-all</code>.</li>
+      </ul></div>
+    </div>
+    <div class="pair phone">
+      <figure><figcaption>Avant</figcaption><img src="captures/avant-notifs-mobile.png" alt="Ancien écran Notifications" loading="lazy"></figure>
+      <figure class="after"><figcaption>Après</figcaption><img src="captures/apres-notifs-mobile.png" alt="Nouvel écran Notifications" loading="lazy"></figure>
+    </div>
+  </section>
+
+  <section class="screen">
+    <h2>Profil</h2>
+    <div class="notes">
+      <div class="bad"><h3>Avant</h3><ul>
+        <li>Un gros bouton « Sauvegardes » pleine largeur au milieu du profil.</li>
+        <li>Onglet « Contributions » vide avec « bientôt visibles ».</li>
+        <li>Bannière en dégradé violet.</li>
+      </ul></div>
+      <div class="good"><h3>Après</h3><ul>
+        <li>Sauvegardes en icône, à côté de Partager.</li>
+        <li>Seuls les onglets utiles : Publications et Projets.</li>
+        <li>Bannière en aplat sombre.</li>
+      </ul></div>
+    </div>
+    <div class="pair phone">
+      <figure><figcaption>Avant</figcaption><img src="captures/avant-profil-mobile.png" alt="Ancien profil" loading="lazy"></figure>
+      <figure class="after"><figcaption>Après</figcaption><img src="captures/apres-profil-mobile.png" alt="Nouveau profil" loading="lazy"></figure>
+    </div>
+  </section>
+
+  <section class="screen">
+    <h2>Paramètres</h2>
+    <div class="notes">
+      <div class="bad"><h3>Avant</h3><ul>
+        <li>Six réglages grisés marqués « Bientôt », plus une note pour l’expliquer.</li>
+      </ul></div>
+      <div class="good"><h3>Après</h3><ul>
+        <li>Seulement ce qui marche : compte, sujets suivis, sauvegardes, notifications, déconnexion.</li>
+      </ul></div>
+    </div>
+    <div class="pair phone">
+      <figure><figcaption>Avant</figcaption><img src="captures/avant-parametres-mobile.png" alt="Anciens paramètres" loading="lazy"></figure>
+      <figure class="after"><figcaption>Après</figcaption><img src="captures/apres-parametres-mobile.png" alt="Nouveaux paramètres" loading="lazy"></figure>
+    </div>
+  </section>
+
+  <section class="screen">
+    <h2>Projets</h2>
+    <div class="notes">
+      <div class="bad"><h3>Avant</h3><ul>
+        <li>Bouton « Publier » en haut, en plus de « Ajouter un projet ».</li>
+        <li>Onglet « Discussions » vide sur chaque fiche projet.</li>
+      </ul></div>
+      <div class="good"><h3>Après</h3><ul>
+        <li>En-tête épuré, le bouton flottant suffit.</li>
+        <li>Fiche projet : Aperçu et Tâches, avec le nombre de tâches dans l’onglet.</li>
+      </ul></div>
+    </div>
+    <div class="pair phone">
+      <figure><figcaption>Avant</figcaption><img src="captures/avant-projets-mobile.png" alt="Ancien écran Projets" loading="lazy"></figure>
+      <figure class="after"><figcaption>Après</figcaption><img src="captures/apres-projets-mobile.png" alt="Nouvel écran Projets" loading="lazy"></figure>
+    </div>
+  </section>
+
+  <section class="screen">
+    <h2>E-mail du code de vérification</h2>
+    <div class="notes">
+      <div class="bad"><h3>Avant</h3><ul>
+        <li>Code en un seul bloc, vouvoiement alors que l’app tutoie.</li>
+        <li>Rien ne rappelait l’identité de l’app.</li>
+      </ul></div>
+      <div class="good"><h3>Après</h3><ul>
+        <li>Logo en tête, ligne de terminal, quatre chiffres dans des cases.</li>
+        <li>Tutoiement partout et conseil de sécurité clair.</li>
+      </ul></div>
+    </div>
+    <div class="pair">
+      <figure><figcaption>Avant</figcaption><img src="captures/avant-email.png" alt="Ancien e-mail" loading="lazy"></figure>
+      <figure class="after"><figcaption>Après</figcaption><img src="captures/apres-email.png" alt="Nouvel e-mail" loading="lazy"></figure>
+    </div>
+  </section>
+
+  <section class="screen next">
+    <h2>À revoir ensemble</h2>
+    <ul>
+      <li>Profil : le bouton « × » en haut à gauche n’a pas de sens quand on arrive par le menu.</li>
+      <li>Profil vide : le bouton « Publier » fait doublon avec le bouton flottant.</li>
+      <li>Profil : compteurs abonnés / suivis, à ajouter côté serveur.</li>
+      <li>Sauvegardes : gardées sur l’appareil pour l’instant. Une table serveur les ferait suivre le compte.</li>
+      <li>Messagerie : pas encore auditée ici, car elle passe par le temps réel.</li>
+    </ul>
+  </section>
+
+  <footer>Captures prises sur une copie locale avec des données de démonstration, pas sur le site en ligne.</footer>
+</div>

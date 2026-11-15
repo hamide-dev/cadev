@@ -18,13 +18,15 @@ const QUICK = [
 
 export function QuickCompose() {
   const me = useMe();
-  const firstName = me.displayName.split(' ')[0];
   return (
     <section className="quick-compose" aria-label="Publier">
-      <Avatar user={me} link={false} />
+      {/* Sur mobile l'avatar est déjà dans l'en-tête : on ne le répète pas. */}
+      <span className="desktop-only">
+        <Avatar user={me} link={false} />
+      </span>
       <div className="grow stack-s">
         <Link to="/publish" className="quick-compose-input">
-          Quoi de neuf dans ton code, {firstName} ?
+          Quoi de neuf dans ton code ?
         </Link>
         <div className="quick-compose-actions">
           {QUICK.map((q) => (

@@ -32,7 +32,7 @@ export function Settings() {
   const navigate = useNavigate();
   return (
     <main className="screen">
-      <TopBar back title="Paramètres" sub="Retour au profil" />
+      <TopBar back title="Paramètres" />
       <div className="pad stack" style={{ paddingBottom: 32 }}>
         <section className="stack-s">
           <h2 className="section-title">Compte et sécurité</h2>
@@ -44,24 +44,12 @@ export function Settings() {
           <h2 className="section-title">Préférences du fil</h2>
           <div className="group">
             <Row title="Sujets suivis · Pour vous" sub={me.interests.join(' · ') || 'Aucun sujet choisi'} value={`${me.interests.length} sujet${me.interests.length > 1 ? 's' : ''}`} to="/profile/edit" />
-            <Row title="Ordre du fil · Abonnements" sub="Les publications les plus récentes d’abord." value="Chronologique" />
+            <Row title="Mes sauvegardes" sub="Publications, questions et projets gardés" to="/saved" />
           </div>
         </section>
         <section className="stack-s">
           <h2 className="section-title">Notifications</h2>
           <PushSettings />
-          <div className="group">
-            <Row title="Réponses et mentions" />
-            <Row title="Activité des projets suivis" />
-          </div>
-        </section>
-        <section className="stack-s">
-          <h2 className="section-title">Confidentialité et modération</h2>
-          <div className="group">
-            <Row title="Invitations de messages" />
-            <Row title="Personnes masquées / bloquées" />
-            <Row title="Signalements et règles de la communauté" />
-          </div>
         </section>
         <button
           type="button"
@@ -74,7 +62,6 @@ export function Settings() {
         >
           <Icon name="logout" size={20} /> Se déconnecter
         </button>
-        <p className="center xs muted">Les réglages marqués « Bientôt » ne sont pas encore pris en charge par le serveur.</p>
       </div>
     </main>
   );

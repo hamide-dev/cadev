@@ -8,6 +8,8 @@ import type { Environment } from '../../../config/environment.js';
 import type { EmailVerificationPurpose } from './email-verification.entity.js';
 
 const BREVO_EMAIL_API_URL = 'https://api.brevo.com/v3/smtp/email';
+// Le logo est servi par le frontend (frontend/public/logo-email.png) : les messageries bloquent les SVG intégrés.
+const DEFAULT_PUBLIC_ORIGIN = 'https://www.hello-world.ci';
 const PUBLIC_EMAIL_ERROR =
   "Impossible d'envoyer l'e-mail pour le moment. Réessaie plus tard.";
 
@@ -52,7 +54,12 @@ export class BrevoEmailService {
           : 'Bienvenue ! Voici ton code';
     const expiryMinutes = purpose === 'password-reset' ? 2 : 4;
     const textContent = `Ton code pour la ${purposeLabel} Hello World : ${code}. Il expire dans ${expiryMinutes} minutes. Si tu n'es pas à l'origine de cette demande, ignore ce message.`;
-    const htmlContent = renderCodeEmail({ title, purposeLabel, code, expiryMinutes, purpose });
+    const origin = (this.config.get('CORS_ORIGINS') ?? '')
+      .split(',')
+      .map((value: string) => value.trim())
+      .find((value: string) => value.startsWith('https://'));
+    const logoUrl = `${origin ?? DEFAULT_PUBLIC_ORIGIN}/logo-email.png`;
+    const htmlContent = renderCodeEmail({ title, purposeLabel, code, expiryMinutes, purpose, logoUrl });
     let response: Response;
     try {
       response = await fetch(BREVO_EMAIL_API_URL, {
@@ -103,14 +110,16 @@ export class BrevoEmailService {
 }
 
 // Gabarit e-mail : tableaux et styles en ligne uniquement, pour Gmail, Outlook et Apple Mail.
-// Thème sombre de l'app, chiffres du code dans des cases séparées, rappel « terminal » de la marque.
+// Thème sombre de l'app, sobre : chiffres du code dans des cases séparées, rappel « terminal » de la marque.
 function renderCodeEmail({
   title,
   purposeLabel,
   code,
   expiryMinutes,
   purpose,
+  logoUrl,
 }: {
+  logoUrl: string;
   title: string;
   purposeLabel: string;
   code: string;
@@ -151,7 +160,7 @@ function renderCodeEmail({
               <td style="padding:0 4px 20px;">
                 <table role="presentation" cellspacing="0" cellpadding="0">
                   <tr>
-                    <td style="width:36px;height:36px;background-color:#f5f5f5;border-radius:9px;color:#141414;font-family:${mono};font-size:15px;font-weight:700;text-align:center;line-height:36px;">&gt;_</td>
+                    <td style="width:40px;height:40px;"><img src="${logoUrl}" width="40" height="40" alt="Hello World" style="display:block;width:40px;height:40px;border:0;border-radius:10px;" /></td>
                     <td style="padding-left:10px;color:#fafafa;font-family:${mono};font-size:17px;font-weight:600;">Hello World</td>
                   </tr>
                 </table>
@@ -160,9 +169,6 @@ function renderCodeEmail({
             <tr>
               <td style="background-color:#1a1a1a;border:1px solid #2e2e2e;border-radius:18px;overflow:hidden;">
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-                  <tr>
-                    <td style="height:4px;background-color:#b79aff;background-image:linear-gradient(90deg,#b79aff,#7ee787);font-size:0;line-height:0;">&nbsp;</td>
-                  </tr>
                   <tr>
                     <td style="padding:32px 28px 8px;">
                       <p style="margin:0 0 18px;font-family:${mono};font-size:13px;line-height:1.6;color:#7ee787;">$ <span style="color:#d4d4d8;">${command}</span></p>

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { Icon } from '../../components/Icon';
 import { Tabs } from '../../components/Tabs';
 import { TopBar } from '../../components/TopBar';
@@ -24,15 +24,7 @@ export function Projects() {
 
   return (
     <main className="screen">
-      <TopBar
-        avatar
-        title="Projets"
-        right={
-          <Link to="/publish?type=project_launch" className="btn btn-primary mobile-only">
-            Publier
-          </Link>
-        }
-      />
+      <TopBar avatar title="Projets" />
       <Tabs
         label="Projets"
         value={tab}

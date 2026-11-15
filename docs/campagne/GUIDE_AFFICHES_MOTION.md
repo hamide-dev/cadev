@@ -28,7 +28,7 @@ Trois idées à faire passer, une par affiche :
 - Fond : `#141414` · Surface : `#202020` · Bordures : `#373737`
 - Texte : `#FFFFFF` · Texte secondaire : `#B8B8C0`
 - Accent violet : `#B794FF` · Vert « code / succès » : `#7EE787` · Étoile : `#F59E0B`
-- Dégradé de bannière : `#1B1338 → #23205A → #1C2A52`
+- Pas de dégradés ni d'effets arc-en-ciel : des aplats de couleur, c'est plus pro.
 
 **Typographies (Google Fonts, gratuites)**
 - **Inter** Bold pour les titres, Regular pour le texte.
@@ -37,7 +37,7 @@ Trois idées à faire passer, une par affiche :
 **Signes de la marque**
 - Le curseur `>_` (qui clignote en motion).
 - Les lignes de terminal : `$ hello-world join`
-- Un bloc de code avec les 3 pastilles rouge / jaune / vert (comme dans l'app).
+- Un bloc de code sobre, fond sombre, police Geist Mono (comme dans l'app).
 
 **Règles de propreté**
 - 1 message par affiche, 7 mots maximum pour le titre.
@@ -83,7 +83,7 @@ Gabarit commun (portrait 1080 × 1350) :
 | Temps | Image | Texte / son |
 | :--- | :--- | :--- |
 | 0–2 s | Écran noir, une ligne s'écrit : `$ hello-world` puis le curseur `>_` clignote | Bruit de clavier |
-| 2–5 s | Le logo grossit, le fond passe au dégradé violet | « Le réseau social des bâtisseurs » |
+| 2–5 s | Le logo grossit sur fond noir uni | « Le réseau social des bâtisseurs » |
 | 5–8 s | Le téléphone glisse, on fait défiler le fil (capture réelle) | « Partage ce que tu codes » |
 | 8–11 s | Zoom sur une question et sa réponse en code | « Trouve de l'aide » |
 | 11–14 s | Page Projets, badge vert qui « pop » | « Trouve ton équipe » |
