@@ -16,4 +16,6 @@ COPY --from=build /app/dist ./dist
 
 USER node
 EXPOSE 3000
-CMD ["node", "dist/main.js"]
+# Au démarrage : on applique d'abord les migrations en attente (celles déjà faites sont ignorées),
+# puis on lance l'API. Aucun réglage à faire dans l'hébergeur.
+CMD ["sh", "-c", "npm run migration:run:prod && exec node dist/main.js"]

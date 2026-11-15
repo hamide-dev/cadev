@@ -4,7 +4,7 @@ import { TopBar } from '../../components/TopBar';
 
 // Éditeur et contact affichés dans les pages légales et en pied de page.
 export const PUBLISHER = 'Viso Studio';
-export const CONTACT_EMAIL = 'contact@hello-world.ci';
+export const CONTACT_EMAIL = 'contact@viso-studio.com';
 const UPDATED = '16 novembre 2026';
 
 export function Credits({ className = '' }: { className?: string }) {
