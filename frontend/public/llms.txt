@@ -1,0 +1,23 @@
+# Hello World
+
+> Hello World est le réseau social des développeurs, pensé d'abord pour l'Afrique, édité par Viso Studio (Côte d'Ivoire). On y partage ce que l'on code, on pose des questions techniques, on trouve une équipe et des projets open source, et on échange en messagerie.
+
+## Ce que propose l'application
+
+- Fil d'actualité : publications, extraits de code colorés, questions techniques, lancements de projets.
+- Entraide : questions avec réponses triées par utilité, commentaires et réponses.
+- Projets open source : projets ouverts aux débutants, tâches « good first issue », proposition d'aide.
+- Messagerie : messages directs et groupes, réponses, aperçus de liens, notifications.
+- Profils de développeurs : spécialité (Front-end, Back-end, Full-stack, Mobile, Data/IA, DevOps, Vibe coding), niveau, abonnés.
+- Application installable sur iPhone et Android, gratuite.
+
+## Liens
+
+- [Accueil](https://www.hello-world.ci/)
+- [Créer un compte](https://www.hello-world.ci/signup)
+- [Conditions d'utilisation](https://www.hello-world.ci/conditions)
+- [Politique de confidentialité](https://www.hello-world.ci/confidentialite)
+
+## Éditeur
+
+Viso Studio — contact@viso-studio.com

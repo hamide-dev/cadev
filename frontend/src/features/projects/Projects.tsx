@@ -24,7 +24,7 @@ export function Projects() {
 
   return (
     <main className="screen">
-      <TopBar avatar title="Projets" />
+      <TopBar avatar title="Projets" sub={data ? `${data.filter((x) => x.isBeginnerFriendly).length} ouverts aux débutants` : undefined} />
       <Tabs
         label="Projets"
         value={tab}

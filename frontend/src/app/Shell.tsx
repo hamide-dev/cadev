@@ -17,7 +17,7 @@ const MAIN_SCREENS = /^\/(feed|explore|projects|notifications|messages)\/?$|^\/u
 export function Shell() {
   const { user } = useSession();
   const { pathname } = useLocation();
-  if (!user) return <Navigate to="/welcome" replace />;
+  if (!user) return <Navigate to="/" replace />;
 
   // La colonne de suggestions n'apparaît que là où elle aide à découvrir : pas pendant qu'on écrit ou règle son compte.
   const focus = /^\/(publish|settings|profile\/edit|signup\/oauth)/.test(pathname);

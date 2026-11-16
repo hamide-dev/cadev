@@ -14,8 +14,13 @@
     <meta name="description" content="Hello World, le réseau social des développeurs : partage ce que tu codes, trouve ton équipe et fais-toi repérer en Afrique." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <title>Hello World</title>
+    <!-- Polices chargées sans bloquer le premier affichage (le texte s'affiche tout de suite avec la police système). -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" /></noscript>
+    <title>Hello World · le réseau social des développeurs africains</title>
+    <link rel="canonical" href="https://www.hello-world.ci/" />
+    <meta name="author" content="Viso Studio" />
+    <meta name="keywords" content="réseau social développeurs, développeurs africains, Côte d'Ivoire, programmation, open source, entraide code, projets, Hello World, Viso Studio" />
     <meta property="og:site_name" content="Hello World" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Hello World · by Viso Studio" />
@@ -23,9 +28,62 @@
     <meta property="og:image" content="https://www.hello-world.ci/og.png" />
     <meta property="og:url" content="https://www.hello-world.ci/" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://www.hello-world.ci/og.png" />
+    <!-- Données structurées : qui édite le site, ce qu'est l'application. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://www.hello-world.ci/#viso-studio",
+            "name": "Viso Studio",
+            "email": "contact@viso-studio.com",
+            "address": { "@type": "PostalAddress", "addressCountry": "CI" },
+            "logo": "https://www.hello-world.ci/icon-512.png"
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://www.hello-world.ci/#site",
+            "url": "https://www.hello-world.ci/",
+            "name": "Hello World",
+            "inLanguage": "fr",
+            "publisher": { "@id": "https://www.hello-world.ci/#viso-studio" }
+          },
+          {
+            "@type": "WebApplication",
+            "name": "Hello World",
+            "url": "https://www.hello-world.ci/",
+            "applicationCategory": "SocialNetworkingApplication",
+            "operatingSystem": "iOS, Android, Web",
+            "description": "Le réseau social des développeurs, en Afrique d'abord : partage ce que tu codes, pose tes questions techniques, trouve ton équipe et des projets open source.",
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "XOF" },
+            "inLanguage": "fr",
+            "image": "https://www.hello-world.ci/og.png",
+            "publisher": { "@id": "https://www.hello-world.ci/#viso-studio" }
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
+    <!-- Contenu lisible sans JavaScript (robots, moteurs IA, navigateurs sans JS). -->
+    <noscript>
+      <main style="max-width:640px;margin:0 auto;padding:32px 16px;font-family:system-ui,sans-serif;color:#f5f5f5;background:#141414">
+        <h1>Hello World, le réseau social des développeurs africains</h1>
+        <p>Partage ce que tu codes, pose tes questions techniques, trouve ton équipe et fais-toi repérer en Afrique. Gratuit, sur iPhone, Android et ordinateur. Par Viso Studio.</p>
+        <h2>Un fil fait pour le code</h2>
+        <p>Publications avec extraits de code colorés, astuces, retours d'expérience et lancements de projets.</p>
+        <h2>De l'entraide entre développeurs</h2>
+        <p>Pose une question technique et reçois des réponses triées par utilité.</p>
+        <h2>Des projets open source pour progresser</h2>
+        <p>Trouve des projets ouverts aux débutants et des tâches pour contribuer.</p>
+        <h2>Une messagerie pour ton équipe</h2>
+        <p>Messages directs et groupes, avec code, liens et notifications.</p>
+        <p><a href="/signup" style="color:#b794ff">Créer un compte</a> · <a href="/conditions" style="color:#b794ff">Conditions</a> · <a href="/confidentialite" style="color:#b794ff">Confidentialité</a></p>
+      </main>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

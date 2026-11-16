@@ -68,6 +68,10 @@ function ConversationList({ openId }: { openId?: string }) {
       <TopBar
         avatar
         title="Messages"
+        sub={(() => {
+          const unread = (data ?? []).reduce((sum, c) => sum + c.unreadCount, 0);
+          return unread ? `${unread} non lu${unread > 1 ? 's' : ''}` : data?.length ? `${data.length} conversation${data.length > 1 ? 's' : ''}` : undefined;
+        })()}
         right={
           <button type="button" className="icon-btn" aria-label="Nouvelle conversation" onClick={() => setCreating(true)}>
             <Icon name="compose" />

@@ -1,0 +1,12 @@
+# Hello World · by Viso Studio
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /settings
+Disallow: /profile/edit
+Disallow: /saved
+Disallow: /messages
+Disallow: /notifications
+Disallow: /publish
+
+Sitemap: https://www.hello-world.ci/sitemap.xml

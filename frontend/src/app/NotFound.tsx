@@ -8,7 +8,7 @@ export function NotFound() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { user } = useSession();
-  const home = user ? { to: '/feed', label: 'Retour au fil' } : { to: '/welcome', label: 'Revenir à l’accueil' };
+  const home = user ? { to: '/feed', label: 'Retour au fil' } : { to: '/', label: 'Revenir à l’accueil' };
   // history.state.idx vient de React Router : 0 = page ouverte directement, pas de retour possible.
   const canGoBack = (window.history.state?.idx ?? 0) > 0;
 

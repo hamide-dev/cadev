@@ -35,6 +35,9 @@
   --radius: 10px;
   --radius-l: 14px;
   --radius-full: 999px;
+  /* Coins concentriques : un élément arrondi posé dans un autre prend le rayon extérieur moins la marge. */
+  --bubble-radius: 18px;
+  --bubble-pad: var(--space-3);
 
   --tap: 44px;
   --nav-h: 64px;
