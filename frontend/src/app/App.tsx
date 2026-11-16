@@ -76,19 +76,21 @@ function Guests() {
 }
 
 export function App() {
-  const { ready, user } = useSession();
+  const { ready } = useSession();
   if (!ready) return <Splash />;
   return (
     <>
     <Intro />
     <Routes>
-      <Route path="/" element={<Navigate to={user ? '/feed' : '/welcome'} replace />} />
+
       <Route path="/oauth/callback" element={<OAuthCallback />} />
       <Route path="/conditions" element={<Terms />} />
       <Route path="/confidentialite" element={<Privacy />} />
       <Route element={<AuthLayout />}>
         <Route element={<Guests />}>
-          <Route path="/welcome" element={<Welcome />} />
+          {/* L'accueil est servi directement à « / » : pas de redirection, contenu indexable. */}
+          <Route path="/" element={<Welcome />} />
+          <Route path="/welcome" element={<Navigate to="/" replace />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignupChoice />} />
         </Route>

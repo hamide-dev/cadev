@@ -410,7 +410,7 @@ a.list-item:hover, button.list-item:hover { background: var(--surface); }
 .edit-banner-btn:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* Messagerie */
-.bubble { max-width: 85%; padding: var(--space-3) var(--space-4); border-radius: var(--radius-l); background: var(--surface); border: 1px solid var(--border); white-space: pre-wrap; overflow-wrap: anywhere; font-size: 15px; }
+.bubble { max-width: 85%; padding: var(--bubble-pad) var(--space-4); border-radius: var(--bubble-radius); background: var(--surface); border: 1px solid var(--border); white-space: pre-wrap; overflow-wrap: anywhere; font-size: 15px; }
 .bubble.mine { align-self: flex-end; background: var(--surface-2); }
 .bubble pre { margin: 0; font: 13px/1.5 var(--mono); color: var(--success); white-space: pre-wrap; }
 .composer { position: sticky; bottom: var(--kb-inset, 0px); display: flex; align-items: flex-end; gap: var(--space-2); padding: var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom)); background: var(--bg); border-top: 1px solid var(--line); }
@@ -667,8 +667,20 @@ a.list-item:hover, button.list-item:hover { background: var(--surface); }
 }
 .intro .mono { font-size: 20px; font-weight: 600; animation: fade 600ms 900ms var(--ease-out) both; }
 .intro.is-leaving { opacity: 0; transform: scale(1.04); pointer-events: none; }
-.welcome-logo { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); padding-top: var(--space-6); }
+.welcome-logo { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); }
 .welcome-logo .mono { font-size: 20px; font-weight: 600; }
+/* Accueil : présentation, bouton d'inscription, puis ce que propose l'app. */
+.welcome { padding: 0 var(--space-5); }
+.welcome-hero { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); padding: var(--space-7) 0 var(--space-6); text-align: center; }
+.welcome-hero h1 { font-size: 32px; line-height: 1.15; text-wrap: balance; }
+.welcome-hero .lead { max-width: 34ch; color: var(--text-2); font-size: 16px; }
+.welcome-cta { display: flex; flex-direction: column; gap: var(--space-3); width: 100%; max-width: 360px; margin-top: var(--space-2); }
+.welcome-features { display: grid; gap: var(--space-5); padding: var(--space-6) 0; border-top: 1px solid var(--line); }
+.welcome-features article { display: grid; grid-template-columns: 40px 1fr; column-gap: var(--space-3); row-gap: 2px; }
+.welcome-features h2 { grid-column: 2; font-size: 16px; font-weight: 700; }
+.welcome-features p { grid-column: 2; font-size: 14px; color: var(--text-2); line-height: 1.5; }
+.welcome-icon { grid-row: span 2; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--surface); color: var(--accent); }
+.welcome-note { text-align: center; font-size: 13px; color: var(--text-3); }
 
 /* ---------- Bannière de message et aperçu de notification ---------- */
 .toast-wrap { position: fixed; top: 0; left: 0; right: 0; z-index: 90; display: flex; justify-content: center; padding: calc(env(safe-area-inset-top) + 8px) 12px 0; pointer-events: none; }
@@ -688,7 +700,7 @@ a.list-item:hover, button.list-item:hover { background: var(--surface); }
 @keyframes toast-in { from { transform: translateY(-120%); opacity: 0; } }
 @keyframes toast-out { to { transform: translateY(-120%); opacity: 0; } }
 .notif-preview { display: flex; gap: var(--space-3); align-items: center; padding: 12px 14px; border-radius: 18px; background: var(--surface-2); border: 1px solid var(--border); }
-.notif-preview img { border-radius: 10px; }
+
 .notif-preview p { margin: 0; font-size: 14px; }
 .notif-preview-head { display: flex; justify-content: space-between; gap: var(--space-2); }
 .notif-preview-head span { font-size: 12px; color: var(--text-3); }
@@ -738,3 +750,11 @@ a.list-item:hover, button.list-item:hover { background: var(--surface); }
 .lightbox-nav.next { right: 8px; }
 .lightbox-nav.next svg { transform: rotate(180deg); }
 .lightbox-count { position: absolute; bottom: calc(env(safe-area-inset-bottom) + 12px); left: 0; right: 0; text-align: center; color: #fff; font-size: 14px; }
+
+/* ---------- Coins concentriques ---------- */
+/* Citation et aperçu de lien dans une bulle : 18 px − 12 px de marge = 6 px. */
+.bubble .msg-quote, .bubble .link-card { border-radius: calc(var(--bubble-radius) - var(--bubble-pad)); }
+/* Aperçu de notification : 18 px − 12 px = 6 px pour l'icône. */
+.notif-preview img { border-radius: calc(18px - 12px); }
+
+.toast .avatar { flex-shrink: 0; }

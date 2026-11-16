@@ -205,7 +205,8 @@
   min-height: var(--tap);
   margin: 0 calc(-1 * var(--space-2));
   padding: var(--space-2);
-  border-radius: var(--radius);
+  /* Survol dans la carte de suggestions (14 px, marge 8 px) : 14 − 8 = 6 px, concentrique. */
+  border-radius: calc(var(--radius-l) - var(--space-2));
   text-decoration: none; color: inherit;
 }
 .aside-link.row { flex-direction: row; align-items: center; }
