@@ -6,6 +6,7 @@ import { useSession } from '../lib/session';
 import { restorePosition, savePosition } from '../lib/videoPositions';
 import { Avatar } from './Avatar';
 import { Icon } from './Icon';
+import { LikeButton } from './LikeButton';
 
 // Visionneuse plein écran, comme sur X : photo de profil, bannière, photos et vidéos des publications.
 // openLightbox() s'appelle de n'importe où ; un seul LightboxHost est monté dans l'app.
@@ -451,10 +452,7 @@ function ViewerPost({ post, onChange, onLeave }: { post: Post; onChange?: (post:
           <Icon name="comment" size={20} />
           <span>{p.commentCount}</span>
         </button>
-        <button type="button" className="action" aria-pressed={!!p.likedByMe} onClick={like} aria-label={p.likedByMe ? "Retirer le j'aime" : "J'aime"}>
-          <Icon name="heart" size={20} />
-          <span>{p.likeCount}</span>
-        </button>
+        <LikeButton liked={!!p.likedByMe} count={p.likeCount} onToggle={() => void like()} />
         <span className="grow" />
         <button type="button" className="action" data-kind="save" aria-pressed={saved} onClick={() => toggleSaved(p)} aria-label={saved ? 'Retirer des sauvegardes' : 'Sauvegarder'}>
           <Icon name="bookmark" size={20} />

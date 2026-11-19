@@ -638,7 +638,48 @@ a.list-item:hover, button.list-item:hover { background: var(--surface); }
 .post, .list-item, .card { transition: background-color 150ms var(--ease), transform 150ms var(--ease); }
 .action:active, .icon-btn:active, .nav-item:active, .chip-action:active { transform: scale(0.92); }
 .action, .icon-btn, .nav-item { transition: transform 160ms var(--spring), color 150ms var(--ease), background-color 150ms var(--ease); }
-.action[aria-pressed='true'] svg { animation: pop 360ms var(--spring); }
+.action:not(.like)[aria-pressed='true'] svg { animation: pop 360ms var(--spring); }
+
+/* ---------- J'aime : le cœur saute, une gerbe part autour, le compteur roule ---------- */
+.like-heart { position: relative; display: inline-grid; place-items: center; }
+.like-svg { display: inline-grid; transition: transform 160ms var(--ease); }
+.like:active .like-svg { transform: scale(0.82); }
+.like-svg.pop { animation: like-pop 560ms cubic-bezier(0.2, 1.6, 0.4, 1) both; }
+@keyframes like-pop { 0% { transform: scale(0.5); } 40% { transform: scale(1.3); } 70% { transform: scale(0.94); } 100% { transform: scale(1); } }
+.like-burst { position: absolute; inset: 0; pointer-events: none; }
+.like-burst::before {
+  content: ''; position: absolute; inset: -6px; border-radius: 50%; border: 2px solid var(--danger);
+  animation: like-ring 460ms ease-out both;
+}
+@keyframes like-ring { from { transform: scale(0.3); opacity: 1; border-width: 6px; } to { transform: scale(1.35); opacity: 0; border-width: 0; } }
+.like-burst i {
+  position: absolute; left: 50%; top: 50%; width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; border-radius: 50%;
+  background: var(--danger); animation: like-spark 640ms cubic-bezier(0.25, 0.7, 0.35, 1) 60ms both;
+}
+.like-burst i:nth-child(even) { width: 4px; height: 4px; background: var(--accent); animation-duration: 520ms; }
+@keyframes like-spark {
+  0% { transform: rotate(var(--a)) translateY(-6px) scale(1); opacity: 1; }
+  65% { opacity: 1; }
+  100% { transform: rotate(var(--a)) translateY(-24px) scale(0.3); opacity: 0; }
+}
+
+.roll { display: inline-flex; overflow: hidden; font-variant-numeric: tabular-nums; line-height: 1.25; }
+.roll-digit { position: relative; display: inline-block; }
+.roll-digit > span { display: inline-block; }
+.roll-out-up, .roll-out-down { position: absolute; left: 0; top: 0; }
+.roll-in-up { animation: roll-in-up 420ms cubic-bezier(0.2, 1.3, 0.4, 1) both; }
+.roll-out-up { animation: roll-out-up 280ms ease-in both; }
+.roll-in-down { animation: roll-in-down 420ms cubic-bezier(0.2, 1.3, 0.4, 1) both; }
+.roll-out-down { animation: roll-out-down 280ms ease-in both; }
+@keyframes roll-in-up { from { transform: translateY(100%); opacity: 0; } }
+@keyframes roll-out-up { to { transform: translateY(-100%); opacity: 0; } }
+@keyframes roll-in-down { from { transform: translateY(-100%); opacity: 0; } }
+@keyframes roll-out-down { to { transform: translateY(100%); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .like-svg.pop, .like-burst, .roll-in-up, .roll-in-down { animation: none; }
+  .like-burst { display: none; }
+  .roll-out-up, .roll-out-down { display: none; }
+}
 @keyframes pop { 40% { transform: scale(1.3); } }
 .tabs button, .tabs a { transition: color 150ms var(--ease), border-color 200ms var(--ease); }
 
@@ -757,9 +798,9 @@ a.list-item:hover, button.list-item:hover { background: var(--surface); }
 .welcome-logo { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); }
 .welcome-logo .mono { font-size: 20px; font-weight: 600; }
 /* Accueil : présentation, bouton d'inscription, puis ce que propose l'app. */
-.welcome { min-height: 100dvh; display: flex; flex-direction: column; justify-content: center; padding: 0 var(--space-5) var(--space-5); }
-.welcome > .credits, .welcome > :last-child { margin-top: auto; }
-.welcome-hero { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); padding: var(--space-7) 0 var(--space-6); text-align: center; }
+.welcome { min-height: 100dvh; display: flex; flex-direction: column; padding: calc(env(safe-area-inset-top) + var(--space-7)) var(--space-5) calc(env(safe-area-inset-bottom) + var(--space-5)); }
+.welcome-hero { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); margin-top: auto; padding-top: var(--space-7); text-align: center; }
+.welcome-hero .credits { margin-top: var(--space-3); }
 .welcome-hero h1 { font-size: 32px; line-height: 1.15; text-wrap: balance; }
 .welcome-hero .lead { max-width: 34ch; color: var(--text-2); font-size: 16px; }
 .welcome-cta { display: flex; flex-direction: column; gap: var(--space-3); width: 100%; max-width: 360px; margin-top: var(--space-2); }
