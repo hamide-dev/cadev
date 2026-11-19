@@ -3,8 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Avatar } from '../../components/Avatar';
 import { Icon } from '../../components/Icon';
 import { RepoCard } from '../../components/RepoCard';
-import { firstUrl, RichText } from './RichText';
-import { LinkPreviewCard } from '../messages/LinkPreviewCard';
+import { RichText } from './RichText';
 import { CodeBlock } from './CodeBlock';
 import { PhotoMosaic } from './PhotoMosaic';
 import { api, type Post } from '../../lib/api';
@@ -163,7 +162,8 @@ export function PostCard({ post, onChange, onDelete, linked = true }: { post: Po
           </div>
         )}
         {photos.length > 0 && <PhotoMosaic photos={photos} />}
-        {repo ? <RepoCard url={repo} /> : firstUrl(post.content) && <LinkPreviewCard url={firstUrl(post.content)!} />}
+        {/* Pas d’aperçu de lien dans les publications : le lien seul suffit. Seul un dépôt GitHub a sa carte. */}
+        {repo && <RepoCard url={repo} />}
         <div className="post-actions">
           <Link to={`/post/${post.id}`} className="action" aria-label={post.type === 'QUESTION' ? 'Voir les réponses' : 'Voir les commentaires'}>
             <Icon name="comment" size={20} />

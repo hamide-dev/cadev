@@ -291,14 +291,33 @@
 .code-token-keyword { color: #d99cff; }
 .code-token-number { color: #8bc7ff; }
 .media-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--space-2); }
-/* Vidéo : bouton plein écran de l'app en haut à droite, à la place du plein écran natif (qui bascule en paysage). */
-.video { position: relative; }
-.video-full { position: absolute; top: var(--space-2); right: var(--space-2); background: rgba(0, 0, 0, 0.55); color: #fff; }
-.video-full:hover { background: rgba(0, 0, 0, 0.75); }
-/* Chrome grise le bouton natif désactivé par controlsList sans le cacher : on le retire. */
-.video video::-webkit-media-controls-fullscreen-button,
-.lightbox video::-webkit-media-controls-fullscreen-button { display: none; }
-.media-grid img, .media-grid video { width: 100%; border-radius: var(--radius); background: var(--surface); aspect-ratio: 4 / 3; object-fit: cover; }
+/* Vidéo du fil, comme sur X : lecture muette automatique, temps restant et son en surimpression. */
+.video { position: relative; overflow: hidden; border-radius: var(--radius); background: #000; cursor: pointer; }
+.video video { display: block; width: 100%; max-height: 560px; object-fit: contain; }
+.video:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.video-time, .video-sound { position: absolute; bottom: 10px; display: inline-flex; align-items: center; border: 0; color: #fff; background: rgba(0, 0, 0, 0.62); font: 600 12px/1 var(--font); font-variant-numeric: tabular-nums; }
+.video-time { left: 10px; padding: 5px 7px; border-radius: 6px; pointer-events: none; }
+.video-sound { right: 10px; width: 30px; height: 30px; justify-content: center; border-radius: 50%; cursor: pointer; }
+.video-sound:active { transform: scale(0.9); }
+.video-play {
+  position: absolute; top: 50%; left: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px;
+  display: grid; place-items: center; border-radius: 50%; color: #fff; background: rgba(0, 0, 0, 0.55); pointer-events: none;
+}
+.video-play svg { fill: currentColor; margin-left: 3px; }
+.media-grid:has(.video) { grid-template-columns: minmax(0, 1fr); }
+.media-grid img { width: 100%; border-radius: var(--radius); background: var(--surface); aspect-ratio: 4 / 3; object-fit: cover; }
+
+/* Plus de 4 photos : une rangée qu'on fait défiler du doigt, la suivante dépasse sur le bord. */
+.carousel {
+  display: flex; gap: 6px; overflow-x: auto; overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory; scrollbar-width: none; border-radius: var(--radius);
+}
+.carousel::-webkit-scrollbar { display: none; }
+.carousel-cell { flex: 0 0 auto; height: 280px; aspect-ratio: 4 / 5; padding: 0; border: 0; border-radius: var(--radius); overflow: hidden; background: var(--surface); scroll-snap-align: start; cursor: zoom-in; }
+.carousel-cell img { display: block; width: 100%; height: 100%; object-fit: cover; transition: opacity 150ms var(--ease); }
+.carousel-cell:hover img { opacity: 0.9; }
+.carousel-cell:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+@media (min-width: 768px) { .carousel-cell { height: 320px; } }
 
 /* Carte dépôt / projet */
 .card {
@@ -523,24 +542,57 @@ a.list-item:hover, button.list-item:hover { background: var(--surface); }
 .more-comments:hover { color: var(--text); background: var(--surface); }
 .link-more { align-self: flex-start; padding: 0; border: 0; background: none; color: var(--text-2); font-size: 13px; font-weight: 600; cursor: pointer; }
 
-/* ---------- Visionneuse d'images ---------- */
-.lightbox {
-  position: fixed; inset: 0; z-index: 60;
-  /* Une seule case de taille fixe (minmax(0, 1fr)) : sans elle, max-height: 100% ne vaut rien
-     et une photo verticale déborde de l'écran. Bas : place pour le compteur « 2 / 3 ». */
-  display: grid; place-items: center;
-  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
-  padding: calc(env(safe-area-inset-top) + 64px) 12px calc(env(safe-area-inset-bottom) + 48px);
-  background: rgba(0, 0, 0, 0.94);
-  animation: fade 200ms var(--ease-out) both;
+/* ---------- Visionneuse (photos et vidéos), comme sur X ---------- */
+/* Le fond et le média sont animés en JS (ouverture depuis la miniature, glisser pour fermer). */
+.viewer { position: fixed; inset: 0; z-index: 60; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+.viewer-backdrop { position: absolute; inset: 0; background: #000; }
+.viewer-track { position: absolute; inset: 0; display: flex; will-change: transform; }
+.viewer-slide {
+  position: relative; flex: 0 0 100%; min-width: 0;
+  /* Une seule case de taille fixe : sans elle, max-height: 100% ne vaut rien et une photo verticale déborde. */
+  display: grid; place-items: center; grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
 }
-.lightbox img, .lightbox video { width: auto; height: auto; max-width: 100%; max-height: 100%; border-radius: 12px; object-fit: contain; animation: zoom-in 320ms var(--spring) both; }
-/* Desktop : les flèches sortent de l'image. */
-@media (min-width: 768px) {
-  .lightbox:has(.lightbox-nav) { padding-left: 72px; padding-right: 72px; }
+.viewer-media { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; transform-origin: center; will-change: transform; -webkit-user-drag: none; }
+@media (min-width: 768px) { .viewer-slide { padding: 24px 72px; } }
+
+/* Commandes : se masquent d'un toucher, et seules pendant une vidéo. */
+.viewer-close, .viewer-nav, .viewer-dots, .viewer-controls, .viewer-play { transition: opacity 200ms var(--ease-out); }
+.viewer.chrome-off :is(.viewer-close, .viewer-nav, .viewer-dots, .viewer-controls) { opacity: 0; pointer-events: none; }
+.viewer-close { position: absolute; top: calc(env(safe-area-inset-top) + 12px); left: 12px; background: rgba(32, 32, 36, 0.72); color: #fff; -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+.viewer-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(32, 32, 36, 0.72); color: #fff; }
+.viewer-nav:disabled { opacity: 0; pointer-events: none; }
+.viewer-nav.prev { left: 16px; }
+.viewer-nav.next { right: 16px; }
+.viewer-nav.next svg { transform: rotate(180deg); }
+@media (hover: none) { .viewer-nav { display: none; } }
+.viewer-dots { position: absolute; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 20px); display: flex; justify-content: center; gap: 6px; pointer-events: none; }
+.viewer-dots span { width: 6px; height: 6px; border-radius: 50%; background: rgba(255, 255, 255, 0.35); transition: background-color 200ms var(--ease), transform 200ms var(--spring); }
+.viewer-dots span.on { background: #fff; transform: scale(1.25); }
+
+.viewer-play {
+  position: absolute; top: 50%; left: 50%; width: 72px; height: 72px; margin: -36px 0 0 -36px;
+  display: grid; place-items: center; border: 0; border-radius: 50%; cursor: pointer;
+  background: rgba(32, 32, 36, 0.72); color: #fff; -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  animation: pop-in 260ms var(--spring) both;
 }
-.lightbox-close { position: absolute; top: calc(env(safe-area-inset-top) + 8px); right: 8px; background: rgba(255, 255, 255, 0.12); color: #fff; }
-@keyframes zoom-in { from { transform: scale(0.92); opacity: 0; } }
+.viewer-play svg { fill: currentColor; margin-left: 4px; }
+@keyframes pop-in { from { transform: scale(0.6); opacity: 0; } }
+.viewer-controls {
+  position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 8px;
+  padding: 32px 12px calc(env(safe-area-inset-bottom) + 12px);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0)); color: #fff;
+}
+.viewer-controls .icon-btn { color: #fff; background: none; }
+.viewer-controls path[d^='M7 4.5'] { fill: currentColor; }
+.viewer-time { font: 500 13px/1 var(--font); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.viewer-seek {
+  flex: 1; min-width: 0; height: 24px; margin: 0; background: none; cursor: pointer; -webkit-appearance: none; appearance: none;
+}
+.viewer-seek::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(to right, #fff var(--p), rgba(255, 255, 255, 0.3) var(--p)); }
+.viewer-seek::-moz-range-track { height: 4px; border-radius: 2px; background: linear-gradient(to right, #fff var(--p), rgba(255, 255, 255, 0.3) var(--p)); }
+.viewer-seek::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; margin-top: -5px; border-radius: 50%; background: #fff; }
+.viewer-seek::-moz-range-thumb { width: 14px; height: 14px; border: 0; border-radius: 50%; background: #fff; }
 .zoomable { cursor: zoom-in; }
 
 /* ---------- Mouvement ---------- */
@@ -744,12 +796,6 @@ a.list-item:hover, button.list-item:hover { background: var(--surface); }
   font: 700 24px/1 var(--font);
 }
 
-/* Galerie de la visionneuse */
-.lightbox-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255, 255, 255, 0.12); color: #fff; }
-.lightbox-nav.prev { left: 8px; }
-.lightbox-nav.next { right: 8px; }
-.lightbox-nav.next svg { transform: rotate(180deg); }
-.lightbox-count { position: absolute; bottom: calc(env(safe-area-inset-bottom) + 12px); left: 0; right: 0; text-align: center; color: #fff; font-size: 14px; }
 
 /* ---------- Coins concentriques ---------- */
 /* Citation et aperçu de lien dans une bulle : 18 px − 12 px de marge = 6 px. */
