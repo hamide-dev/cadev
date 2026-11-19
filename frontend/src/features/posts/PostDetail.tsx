@@ -10,6 +10,7 @@ import { api, type Comment } from '../../lib/api';
 import { errorMessage, timeAgo } from '../../lib/format';
 import { useMe } from '../../lib/session';
 import { useLoad } from '../../lib/useLoad';
+import { useAutosize } from '../../lib/useAutosize';
 
 const PAGE = 5;
 const CLAMP = 280;
@@ -66,6 +67,7 @@ export function PostDetail() {
   const [following, setFollowing] = useState(false);
   const [useful, setUseful] = useState<Record<string, boolean>>({});
   const [reply, setReply] = useState('');
+  const replyBox = useAutosize(reply);
   const [parent, setParent] = useState<Comment | null>(null);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
@@ -232,7 +234,7 @@ export function PostDetail() {
           <Avatar user={me} size="s" link={false} />
           <label className="grow">
             <span className="sr-only">Ta réponse</span>
-            <textarea id="reply" className="textarea" rows={1} placeholder={`Répondre à ${(parent?.author ?? p.author).displayName.split(' ')[0]}…`} value={reply} onChange={(e) => setReply(e.target.value)} maxLength={5000} />
+            <textarea ref={replyBox} id="reply" className="textarea" rows={1} placeholder={`Répondre à ${(parent?.author ?? p.author).displayName.split(' ')[0]}…`} value={reply} onChange={(e) => setReply(e.target.value)} maxLength={5000} />
           </label>
           <button type="submit" className="icon-btn" aria-label="Envoyer" disabled={sending || !reply.trim()}>
             {sending ? <span className="spinner" /> : <Icon name="send" />}

@@ -37,6 +37,7 @@ const PATHS: Record<string, string> = {
   expand: 'M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7',
   play: 'M7 4.5v15a.8.8 0 0 0 1.2.7l12.3-7.5a.8.8 0 0 0 0-1.4L8.2 3.8A.8.8 0 0 0 7 4.5z',
   pause: 'M8 5v14M16 5v14',
+  info: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 16v-4M12 8h.01',
   volume: 'M11 5 6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14',
   muted: 'M11 5 6 9H2v6h4l5 4zM22 9l-6 6M16 9l6 6',
 };

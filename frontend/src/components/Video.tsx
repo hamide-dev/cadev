@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
+import type { Post } from '../lib/api';
 import { restorePosition, savePosition } from '../lib/videoPositions';
 import { Icon } from './Icon';
 import { openLightbox } from './Lightbox';
 
 // Vidéo d'une publication, comme dans le fil de X : elle se lance en silence quand elle est
 // bien visible et s'arrête en sortant de l'écran, en boucle, sans les commandes du navigateur.
-// Temps restant en bas à gauche, son en bas à droite. Un toucher l'ouvre en plein écran, avec le son.
+// En bas à gauche : pause/lecture et temps restant ; son en bas à droite. Un toucher l'ouvre en plein écran, avec le son.
 // Le choix du son vaut pour toutes les vidéos du fil, le temps de la session.
 let soundOn = false;
 const SOUND_EVENT = 'hw:video-sound';
@@ -15,7 +16,7 @@ const left = (v: HTMLVideoElement) => {
   return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 };
 
-export function Video({ id, src }: { id: string; src: string }) {
+export function Video({ id, src, post, onPostChange }: { id: string; src: string; post?: Post; onPostChange?: (post: Post) => void }) {
   const box = useRef<HTMLDivElement>(null);
   const ref = useRef<HTMLVideoElement>(null);
   const [muted, setMuted] = useState(!soundOn);
@@ -56,7 +57,7 @@ export function Video({ id, src }: { id: string; src: string }) {
   const openFull = () => {
     savePosition(id, ref.current, true);
     ref.current?.pause();
-    openLightbox({ src, video: true, id, origin: () => box.current, onClose: () => restorePosition(id, ref.current) });
+    openLightbox({ src, video: true, id, post, onPostChange, origin: () => box.current, onClose: () => restorePosition(id, ref.current) });
   };
 
   return (
@@ -89,7 +90,23 @@ export function Video({ id, src }: { id: string; src: string }) {
           <Icon name="play" size={26} />
         </span>
       )}
-      {remaining && <span className="video-time">{remaining}</span>}
+      <div className="video-info">
+        <button
+          type="button"
+          className="video-toggle"
+          aria-label={paused ? 'Lire la vidéo' : 'Mettre en pause'}
+          onClick={(e) => {
+            e.stopPropagation();
+            const v = ref.current;
+            if (!v) return;
+            if (v.paused) void v.play().catch(() => {});
+            else v.pause();
+          }}
+        >
+          <Icon name={paused ? 'play' : 'pause'} size={14} />
+        </button>
+        {remaining && <span className="video-time">{remaining}</span>}
+      </div>
       <button
         type="button"
         className="video-sound"

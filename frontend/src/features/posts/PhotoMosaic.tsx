@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { openLightbox } from '../../components/Lightbox';
+import type { Post } from '../../lib/api';
 
 type Photo = { src: string; alt: string };
 const GRID_MAX = 4;
@@ -8,7 +9,7 @@ const GRID_MAX = 4;
 // Jusqu'à 4 : en grille (1 pleine largeur, 2 côte à côte, 3 : une grande et deux empilées, 4 : 2 × 2).
 // Au-delà : une rangée qu'on fait défiler du doigt, photo par photo, la suivante dépasse sur le bord.
 // Un toucher ouvre la visionneuse sur la bonne photo, qui grandit depuis sa miniature.
-export function PhotoMosaic({ photos }: { photos: Photo[] }) {
+export function PhotoMosaic({ photos, post, onPostChange }: { photos: Photo[]; post?: Post; onPostChange?: (post: Post) => void }) {
   const cells = useRef<(HTMLElement | null)[]>([]);
   const carousel = photos.length > GRID_MAX;
 
@@ -17,6 +18,8 @@ export function PhotoMosaic({ photos }: { photos: Photo[] }) {
       ...photos[index]!,
       gallery: photos,
       index,
+      post,
+      onPostChange,
       origin: (i) => {
         const cell = cells.current[i];
         if (!cell) return null;

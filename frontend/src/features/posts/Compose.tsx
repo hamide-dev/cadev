@@ -9,6 +9,7 @@ import { api, type Media, type PostType, uploadPostToCloudinary } from '../../li
 import { errorMessage, findRepoUrl, INTERESTS, roleLine } from '../../lib/format';
 import { useMe } from '../../lib/session';
 import { useLoad } from '../../lib/useLoad';
+import { useAutosize } from '../../lib/useAutosize';
 
 // Limite du back (ArrayMaxSize(5) sur attachmentIds).
 const MAX_MEDIA = 5;
@@ -27,6 +28,7 @@ export function Compose() {
   const initial = (COMPOSE_TABS.find(([t]) => t.toLowerCase() === params.get('type')) ?? COMPOSE_TABS[0])[0];
   const [type, setType] = useState<PostType>(initial);
   const [content, setContent] = useState('');
+  const contentBox = useAutosize(content);
   const [code, setCode] = useState<string | null>(params.get('code') ? '' : null);
   const [repo, setRepo] = useState('');
   const [tags, setTags] = useState<string[]>([]);
@@ -111,6 +113,7 @@ export function Compose() {
           {type === 'QUESTION' ? 'Votre question' : type === 'PROJECT_LAUNCH' ? 'Présentez le projet' : 'Votre publication'}
         </label>
         <textarea
+          ref={contentBox}
           id="content"
           className="textarea"
           style={{ minHeight: 160, border: 0, padding: 0, background: 'none', fontSize: 17 }}
