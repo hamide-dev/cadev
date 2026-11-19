@@ -13,7 +13,7 @@ const FEATURES = [
   { icon: 'mail', title: 'Une messagerie pour ton équipe', text: 'Discute en direct, partage du code et des liens, et reçois une notification à chaque message.' },
 ];
 
-// Accueil : le logo, la promesse et les deux boutons.
+// Accueil : le logo en haut, la promesse et les deux boutons en bas.
 export function Welcome() {
   const [about, setAbout] = useState(false);
   return (
@@ -21,11 +21,12 @@ export function Welcome() {
       <button type="button" className="icon-btn welcome-info" aria-label="Ce que propose Hello World" onClick={() => setAbout(true)}>
         <Icon name="info" size={20} />
       </button>
+      {/* Le logo en haut ; le titre et les boutons en bas, sous le pouce. */}
+      <div className="welcome-logo">
+        <AnimatedLogo size={112} replay alt="Logo de Hello World" />
+        <span className="mono">Hello World</span>
+      </div>
       <section className="welcome-hero">
-        <div className="welcome-logo">
-          <AnimatedLogo size={112} replay alt="Logo de Hello World" />
-          <span className="mono">Hello World</span>
-        </div>
         <h1>
           Le réseau social
           <br />
@@ -43,8 +44,8 @@ export function Welcome() {
             </Link>
           </p>
         </div>
+        <Credits className="center" />
       </section>
-      <Credits className="center" />
       {about && (
         <Sheet title="Ce que propose Hello World" onClose={() => setAbout(false)}>
           <div className="welcome-features">

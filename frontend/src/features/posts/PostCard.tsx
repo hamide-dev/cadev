@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Avatar } from '../../components/Avatar';
 import { Icon } from '../../components/Icon';
+import { LikeButton } from '../../components/LikeButton';
 import { RepoCard } from '../../components/RepoCard';
 import { RichText } from './RichText';
 import { CodeBlock } from './CodeBlock';
@@ -170,10 +171,7 @@ export function PostCard({ post, onChange, onDelete, linked = true }: { post: Po
             <span>{post.commentCount}</span>
             {post.type === 'QUESTION' ? 'Répondre' : 'Commenter'}
           </Link>
-          <button type="button" className="action" aria-pressed={!!post.likedByMe} onClick={toggleLike} aria-label={post.likedByMe ? "Retirer le j'aime" : "J'aime"}>
-            <Icon name="heart" size={20} />
-            {post.likeCount}
-          </button>
+          <LikeButton liked={!!post.likedByMe} count={post.likeCount} onToggle={() => void toggleLike()} />
           <span className="grow" />
           <button type="button" className="action" aria-pressed={saved} data-kind="save" onClick={() => toggleSaved(post)} aria-label={saved ? 'Retirer des sauvegardes' : 'Sauvegarder'}>
             <Icon name="bookmark" size={20} />
