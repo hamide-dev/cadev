@@ -7,6 +7,7 @@ import { Empty, ErrorState, Loading } from '../../components/states';
 import { conversationSubtitle, conversationTitle } from './format';
 import { errorMessage } from '../../lib/format';
 import { useMe } from '../../lib/session';
+import { useAutosize } from '../../lib/useAutosize';
 import { type Conversation, emit, getSocket, type Message } from '../../lib/socket';
 import { MessageBubble } from './MessageBubble';
 
@@ -27,6 +28,7 @@ export function ConversationScreen() {
   const [messages, setMessages] = useState<Message[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [text, setText] = useState('');
+  const messageBox = useAutosize(text);
   const [type, setType] = useState<'TEXT' | 'CODE' | 'LINK'>('TEXT');
   const [sending, setSending] = useState(false);
   const [typing, setTyping] = useState<string[]>([]);
@@ -192,6 +194,7 @@ export function ConversationScreen() {
           <label className="grow">
             <span className="sr-only">Ton message</span>
             <textarea
+              ref={messageBox}
               id="message-input"
               className={`textarea ${type === 'CODE' ? 'mono' : ''}`}
               rows={1}

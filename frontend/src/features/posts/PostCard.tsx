@@ -157,11 +157,11 @@ export function PostCard({ post, onChange, onDelete, linked = true }: { post: Po
         {videos.length > 0 && (
           <div className="media-grid">
             {videos.map((media) => (
-              <Video key={media.id} id={media.id} src={media.url} />
+              <Video key={media.id} id={media.id} src={media.url} post={post} onPostChange={onChange} />
             ))}
           </div>
         )}
-        {photos.length > 0 && <PhotoMosaic photos={photos} />}
+        {photos.length > 0 && <PhotoMosaic photos={photos} post={post} onPostChange={onChange} />}
         {/* Pas d’aperçu de lien dans les publications : le lien seul suffit. Seul un dépôt GitHub a sa carte. */}
         {repo && <RepoCard url={repo} />}
         <div className="post-actions">

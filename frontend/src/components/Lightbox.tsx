@@ -1,5 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { api, type Post } from '../lib/api';
+import { isSaved, toggleSaved, useSaved } from '../lib/saved';
+import { useSession } from '../lib/session';
 import { restorePosition, savePosition } from '../lib/videoPositions';
+import { Avatar } from './Avatar';
 import { Icon } from './Icon';
 
 // Visionneuse plein écran, comme sur X : photo de profil, bannière, photos et vidéos des publications.
@@ -7,7 +12,8 @@ import { Icon } from './Icon';
 // - Ouverture : le média grandit depuis sa miniature (origin) ; fermeture : il y retourne.
 // - Galerie : on balaie au doigt (le média suit), flèches et clavier sur ordinateur.
 // - On glisse vers le haut ou le bas pour fermer, le fond s'éclaircit avec la distance.
-// - Toucher : affiche ou masque les commandes ; double toucher : zoom sur la photo.
+// - Toucher au milieu : les barres (croix en haut, actions et lecture en bas) glissent hors de l'écran
+//   pour ne laisser que le média, un autre toucher les fait revenir. Double toucher : zoom sur la photo.
 // - Vidéo : reprend à sa position et la rend à la fermeture (onClose), commandes de l'app.
 type Photo = { src: string; alt?: string };
 type Item = Photo & {
@@ -18,6 +24,9 @@ type Item = Photo & {
   index?: number;
   /** Élément d'où part (et où revient) le média n° index. */
   origin?: (index: number) => HTMLElement | null | undefined;
+  /** Publication du média : ses actions (commenter, j'aime, sauvegarder) s'affichent en bas. */
+  post?: Post;
+  onPostChange?: (post: Post) => void;
 };
 const EVENT = 'hw:lightbox';
 const EASE = 'cubic-bezier(0.32, 0.72, 0, 1)';
@@ -60,6 +69,9 @@ export function LightboxHost() {
   const zoom = useRef({ s: 1, x: 0, y: 0 });
   const drag = useRef<{ x: number; y: number; t: number; lx: number; ly: number; lt: number; axis: 'x' | 'y' | 'pan' | null; id: number } | null>(null);
   const lastTap = useRef({ t: 0, x: 0, y: 0 });
+  const goTo = useRef<string | null>(null);
+  const [videoEl, setVideoEl] = useState<HTMLVideoElement | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const onOpen = (event: Event) => {
@@ -69,13 +81,13 @@ export function LightboxHost() {
       setClosing(false);
       setChrome(true);
       setIndex(detail.index ?? 0);
+      setVideoEl(null);
       setItem(detail);
     };
     window.addEventListener(EVENT, onOpen);
     return () => window.removeEventListener(EVENT, onOpen);
   }, []);
 
-  const hideChrome = useRef(() => setChrome(false)).current;
   const slides: Photo[] = item ? (item.gallery?.length ? item.gallery : [item]) : [];
   const count = slides.length;
   const media = () => mediaRefs.current[index] ?? null;
@@ -150,6 +162,8 @@ export function LightboxHost() {
     setItem(null);
     setClosing(false);
     onClose?.();
+    if (goTo.current) navigate(goTo.current);
+    goTo.current = null;
   };
 
   // Fermeture : retour vers la miniature si elle est à l'écran, sinon le média file dans le sens du geste.
@@ -210,7 +224,7 @@ export function LightboxHost() {
 
   // Gestes : on décide de l'axe au premier mouvement net, puis le média suit le doigt.
   const onPointerDown = (e: React.PointerEvent) => {
-    if (closing || (e.target as HTMLElement).closest('button, input, .viewer-controls')) return;
+    if (closing || (e.target as HTMLElement).closest('button, input, a, .viewer-footer')) return;
     const now = performance.now();
     drag.current = { x: e.clientX, y: e.clientY, t: now, lx: e.clientX, ly: e.clientY, lt: now, axis: zoom.current.s > 1 ? 'pan' : null, id: e.pointerId };
     rootRef.current?.setPointerCapture(e.pointerId);
@@ -303,6 +317,10 @@ export function LightboxHost() {
 
   if (!item) return null;
   const label = item.video ? 'Vidéo' : count > 1 ? `Photo ${index + 1} sur ${count}` : slides[0]?.alt || 'Image';
+  const leave = (path: string) => {
+    goTo.current = path;
+    close();
+  };
   return (
     <div
       ref={rootRef}
@@ -324,13 +342,11 @@ export function LightboxHost() {
                 ref={(el) => {
                   mediaRefs.current[i] = el;
                   videoRef.current = el;
+                  if (el && el !== videoEl) setVideoEl(el);
                 }}
                 src={photo.src}
                 id={item.id}
-                chrome={chrome}
                 onReady={animateIn}
-                onActivity={() => setChrome(true)}
-                onIdle={hideChrome}
               />
             ) : Math.abs(i - index) <= 1 ? (
               <img
@@ -349,7 +365,7 @@ export function LightboxHost() {
       </div>
 
       <button type="button" className="icon-btn viewer-close" aria-label="Fermer" onClick={() => close()}>
-        <Icon name="x" />
+        <Icon name="back" />
       </button>
       {count > 1 && (
         <>
@@ -359,53 +375,163 @@ export function LightboxHost() {
           <button type="button" className="icon-btn viewer-nav next" aria-label="Photo suivante" disabled={index === count - 1} onClick={() => go(1)}>
             <Icon name="back" />
           </button>
+        </>
+      )}
+
+      {/* Bas de l'écran : qui publie et ce qu'il dit, les actions, puis la lecture de la vidéo. */}
+      <div className="viewer-footer">
+        {count > 1 && (
           <div className="viewer-dots" aria-live="polite" aria-label={`${index + 1} sur ${count}`}>
             {slides.map((photo, i) => (
               <span key={photo.src + i} className={i === index ? 'on' : ''} />
             ))}
           </div>
-        </>
+        )}
+        {item.post && <ViewerPost post={item.post} onChange={item.onPostChange} onLeave={leave} />}
+        {item.video && videoEl && <VideoBar video={videoEl} />}
+      </div>
+    </div>
+  );
+}
+
+// La publication sous le média : auteur, texte (deux lignes, un toucher l'ouvre en entier),
+// puis commenter, j'aime, sauvegarder, partager. Le j'aime part tout de suite et revient en arrière en cas d'échec.
+function ViewerPost({ post, onChange, onLeave }: { post: Post; onChange?: (post: Post) => void; onLeave: (path: string) => void }) {
+  const { user } = useSession();
+  const [p, setP] = useState(post);
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const saved = isSaved(useSaved(), p.id);
+  const update = (next: Post) => {
+    setP(next);
+    onChange?.(next);
+  };
+  const like = async () => {
+    if (!user) return onLeave('/login');
+    const before = p;
+    const on = !p.likedByMe;
+    update({ ...p, likedByMe: on, likeCount: p.likeCount + (on ? 1 : -1) });
+    try {
+      await api.like(p.id, on);
+    } catch {
+      update(before);
+    }
+  };
+  const share = async () => {
+    const url = `${location.origin}/post/${p.id}`;
+    try {
+      if (navigator.share) await navigator.share({ title: `${p.author.displayName} sur Hello World`, url });
+      else {
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1800);
+      }
+    } catch {
+      // Partage annulé.
+    }
+  };
+  const text = p.content.trim();
+
+  return (
+    <div className="viewer-post">
+      <button type="button" className="viewer-author" onClick={() => onLeave(`/u/${p.author.username}`)}>
+        <Avatar user={p.author} size="s" link={false} />
+        <span>
+          <strong>{p.author.displayName}</strong>
+          <span>@{p.author.username}</span>
+        </span>
+      </button>
+      {text && (
+        <button type="button" className={`viewer-text${open ? ' open' : ''}`} onClick={() => setOpen(!open)} aria-expanded={open}>
+          {text}
+        </button>
       )}
+      <div className="viewer-actions">
+        <button type="button" className="action" onClick={() => onLeave(`/post/${p.id}`)} aria-label={p.type === 'QUESTION' ? 'Voir les réponses' : 'Voir les commentaires'}>
+          <Icon name="comment" size={20} />
+          <span>{p.commentCount}</span>
+        </button>
+        <button type="button" className="action" aria-pressed={!!p.likedByMe} onClick={like} aria-label={p.likedByMe ? "Retirer le j'aime" : "J'aime"}>
+          <Icon name="heart" size={20} />
+          <span>{p.likeCount}</span>
+        </button>
+        <span className="grow" />
+        <button type="button" className="action" data-kind="save" aria-pressed={saved} onClick={() => toggleSaved(p)} aria-label={saved ? 'Retirer des sauvegardes' : 'Sauvegarder'}>
+          <Icon name="bookmark" size={20} />
+        </button>
+        <button type="button" className="action" onClick={share} aria-label={copied ? 'Lien copié' : 'Partager la publication'}>
+          <Icon name={copied ? 'check' : 'share'} size={20} />
+        </button>
+      </div>
     </div>
   );
 }
 
 const time = (s: number) => {
-  if (!Number.isFinite(s)) return '0:00';
+  if (!Number.isFinite(s) || s < 0) return '0:00';
   const m = Math.floor(s / 60);
   return `${m}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 };
 
-// Lecteur de la visionneuse : sans les commandes du navigateur, avec celles de l'app,
-// qui se masquent seules pendant la lecture.
-function ViewerVideo({ ref, src, id, chrome, onReady, onActivity, onIdle }: {
+// Barre de lecture, tout en bas : fine ligne de progression qu'on peut faire glisser,
+// puis pause/lecture, temps restant et son.
+function VideoBar({ video }: { video: HTMLVideoElement }) {
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const refresh = () => tick((n) => n + 1);
+    const events = ['timeupdate', 'play', 'pause', 'ended', 'volumechange', 'loadedmetadata'];
+    events.forEach((name) => video.addEventListener(name, refresh));
+    return () => events.forEach((name) => video.removeEventListener(name, refresh));
+  }, [video]);
+
+  const playing = !video.paused && !video.ended;
+  const duration = video.duration || 0;
+  return (
+    <div className="viewer-controls">
+      <input
+        type="range"
+        className="viewer-seek"
+        aria-label="Position dans la vidéo"
+        min={0}
+        max={duration}
+        step={0.1}
+        value={video.currentTime}
+        style={{ '--p': `${duration ? (video.currentTime / duration) * 100 : 0}%` } as React.CSSProperties}
+        onChange={(e) => {
+          video.currentTime = Number(e.target.value);
+        }}
+      />
+      <div className="viewer-controls-row">
+        <button type="button" className="icon-btn" aria-label={playing ? 'Pause' : 'Lire'} onClick={() => (playing ? video.pause() : void video.play().catch(() => {}))}>
+          <Icon name={playing ? 'pause' : 'play'} size={20} />
+        </button>
+        <span className="viewer-time">-{time(duration - video.currentTime)}</span>
+        <span className="grow" />
+        <button
+          type="button"
+          className="icon-btn"
+          aria-label={video.muted ? 'Activer le son' : 'Couper le son'}
+          onClick={() => {
+            video.muted = !video.muted;
+          }}
+        >
+          <Icon name={video.muted ? 'muted' : 'volume'} size={20} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Le média vidéo de la visionneuse, sans les commandes du navigateur (la barre de l'app est en bas).
+// En pause, un bouton de lecture au centre.
+function ViewerVideo({ ref, src, id, onReady }: {
   ref: (el: HTMLVideoElement | null) => void;
   src: string;
   id?: string;
-  chrome: boolean;
   onReady: () => void;
-  onActivity: () => void;
-  onIdle: () => void;
 }) {
   const video = useRef<HTMLVideoElement | null>(null);
   const [playing, setPlaying] = useState(false);
-  const [current, setCurrent] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [muted, setMuted] = useState(false);
-
-  useEffect(() => {
-    if (!chrome || !playing) return;
-    const timer = window.setTimeout(onIdle, 2500);
-    return () => window.clearTimeout(timer);
-  }, [chrome, playing, onIdle]);
-
-  const toggle = () => {
-    const v = video.current;
-    if (!v) return;
-    if (v.paused || v.ended) void v.play().catch(() => {});
-    else v.pause();
-    onActivity();
-  };
 
   return (
     <>
@@ -419,54 +545,18 @@ function ViewerVideo({ ref, src, id, chrome, onReady, onActivity, onIdle }: {
         autoPlay
         playsInline
         onLoadedMetadata={(e) => {
-          const v = e.currentTarget;
-          setDuration(v.duration);
-          if (id) restorePosition(id, v);
+          if (id) restorePosition(id, e.currentTarget);
           onReady();
         }}
-        onTimeUpdate={(e) => setCurrent(e.currentTarget.currentTime)}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
         onEnded={() => setPlaying(false)}
-        onVolumeChange={(e) => setMuted(e.currentTarget.muted)}
       />
       {!playing && (
-        <button type="button" className="viewer-play" aria-label="Lire" onClick={toggle}>
+        <button type="button" className="viewer-play" aria-label="Lire" onClick={() => void video.current?.play().catch(() => {})}>
           <Icon name="play" size={30} />
         </button>
       )}
-      <div className="viewer-controls">
-        <button type="button" className="icon-btn" aria-label={playing ? 'Pause' : 'Lire'} onClick={toggle}>
-          <Icon name={playing ? 'pause' : 'play'} size={20} />
-        </button>
-        <span className="viewer-time">{time(current)} / {time(duration)}</span>
-        <input
-          type="range"
-          className="viewer-seek"
-          aria-label="Position dans la vidéo"
-          min={0}
-          max={duration || 0}
-          step={0.1}
-          value={current}
-          style={{ '--p': `${duration ? (current / duration) * 100 : 0}%` } as React.CSSProperties}
-          onChange={(e) => {
-            if (video.current) video.current.currentTime = Number(e.target.value);
-            setCurrent(Number(e.target.value));
-            onActivity();
-          }}
-        />
-        <button
-          type="button"
-          className="icon-btn"
-          aria-label={muted ? 'Activer le son' : 'Couper le son'}
-          onClick={() => {
-            if (video.current) video.current.muted = !video.current.muted;
-            onActivity();
-          }}
-        >
-          <Icon name={muted ? 'muted' : 'volume'} size={20} />
-        </button>
-      </div>
     </>
   );
 }
