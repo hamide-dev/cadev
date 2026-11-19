@@ -35,6 +35,10 @@ const PATHS: Record<string, string> = {
   x: 'M18 6 6 18M6 6l12 12',
   filter: 'M4 6h16M7 12h10M10 18h4',
   expand: 'M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7',
+  play: 'M7 4.5v15a.8.8 0 0 0 1.2.7l12.3-7.5a.8.8 0 0 0 0-1.4L8.2 3.8A.8.8 0 0 0 7 4.5z',
+  pause: 'M8 5v14M16 5v14',
+  volume: 'M11 5 6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14',
+  muted: 'M11 5 6 9H2v6h4l5 4zM22 9l-6 6M16 9l6 6',
 };
 
 export function Icon({ name, size = 24, label }: { name: keyof typeof PATHS | string; size?: number; label?: string }) {

@@ -1,32 +1,47 @@
+import { useRef } from 'react';
 import { openLightbox } from '../../components/Lightbox';
 
 type Photo = { src: string; alt: string };
-const SHOWN = 4;
+const GRID_MAX = 4;
 
-// Photos d'une publication en grille, comme sur X :
-// 1 photo pleine largeur, 2 côte à côte, 3 : une grande à gauche et deux empilées à droite, 4 : 2 × 2.
-// « +N » sur la 4e case quand il y en a plus. Un clic ouvre la galerie sur la bonne photo.
+// Photos d'une publication, comme sur X.
+// Jusqu'à 4 : en grille (1 pleine largeur, 2 côte à côte, 3 : une grande et deux empilées, 4 : 2 × 2).
+// Au-delà : une rangée qu'on fait défiler du doigt, photo par photo, la suivante dépasse sur le bord.
+// Un toucher ouvre la visionneuse sur la bonne photo, qui grandit depuis sa miniature.
 export function PhotoMosaic({ photos }: { photos: Photo[] }) {
-  const shown = photos.slice(0, SHOWN);
-  const hidden = photos.length - shown.length;
+  const cells = useRef<(HTMLElement | null)[]>([]);
+  const carousel = photos.length > GRID_MAX;
+
+  const open = (index: number) =>
+    openLightbox({
+      ...photos[index]!,
+      gallery: photos,
+      index,
+      origin: (i) => {
+        const cell = cells.current[i];
+        if (!cell) return null;
+        // Dans la rangée, on ramène la photo dans le champ avant qu'elle ne s'y range.
+        if (carousel) cell.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        return cell;
+      },
+    });
 
   return (
-    <div className={`mosaic mosaic-${shown.length}`}>
-      {shown.map((photo, index) => {
-        const more = hidden > 0 && index === shown.length - 1;
-        return (
-          <button
-            key={photo.src}
-            type="button"
-            className="mosaic-cell"
-            aria-label={more ? `Voir les ${hidden + 1} dernières photos` : photos.length > 1 ? `Agrandir la photo ${index + 1} sur ${photos.length}` : 'Agrandir l’image'}
-            onClick={() => openLightbox({ ...photo, gallery: photos, index })}
-          >
-            <img src={photo.src} alt="" loading="lazy" />
-            {more && <span className="mosaic-more" aria-hidden="true">+{hidden}</span>}
-          </button>
-        );
-      })}
+    <div className={carousel ? 'carousel' : `mosaic mosaic-${photos.length}`}>
+      {photos.map((photo, index) => (
+        <button
+          key={photo.src}
+          ref={(el) => {
+            cells.current[index] = el;
+          }}
+          type="button"
+          className={carousel ? 'carousel-cell' : 'mosaic-cell'}
+          aria-label={photos.length > 1 ? `Agrandir la photo ${index + 1} sur ${photos.length}` : 'Agrandir l’image'}
+          onClick={() => open(index)}
+        >
+          <img src={photo.src} alt="" loading="lazy" draggable={false} />
+        </button>
+      ))}
     </div>
   );
 }
